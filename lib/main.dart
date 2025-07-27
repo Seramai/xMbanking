@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'Screens/registration_screen.dart';
+import 'Screens/login_screen.dart';
 
 void main() {
   runApp(const MyApp());
@@ -15,10 +16,11 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
-      // 🔥 NEW: Added named routes for better navigation management
+      // routes for better navigation management
       routes: {
         '/': (context) => const MyHomePage(title: 'Flutter Demo Home Page'),
         '/registration': (context) => RegistrationScreen(),
+        '/login': (context)=> LoginScreen(),
       },
       initialRoute: '/',
     );
@@ -43,9 +45,12 @@ class _MyHomePageState extends State<MyHomePage> {
     });
   }
 
-  // 🔥 NEW: Function to navigate to registration screen
+  // Function to navigate to registration screen
   void _navigateToRegistration() {
     Navigator.pushNamed(context, '/registration');
+  }
+  void _navigateToLogin(){
+    Navigator.pushNamed(context, '/login');
   }
 
   @override
@@ -54,12 +59,17 @@ class _MyHomePageState extends State<MyHomePage> {
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         title: Text(widget.title),
-        //action button to navigate to registration
+        //button to navigate to registration
         actions: [
           IconButton(
             onPressed: _navigateToRegistration,
             icon: const Icon(Icons.person_add),
             tooltip: 'Go to Registration',
+          ),
+          IconButton(
+            onPressed: _navigateToLogin,
+            icon: const Icon(Icons.login),
+            tooltip: 'Go to Login',
           ),
         ],
       ),
@@ -77,6 +87,15 @@ class _MyHomePageState extends State<MyHomePage> {
             ElevatedButton(
               onPressed: _navigateToRegistration,
               child: const Text('Go to Registration'),
+            ),
+            const SizedBox(height: 10),
+            ElevatedButton(
+              onPressed: _navigateToLogin,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blue,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Go to Login'),
             ),
           ],
         ),

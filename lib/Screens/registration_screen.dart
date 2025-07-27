@@ -20,11 +20,11 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   
   // State variables for file uploads and user interactions
   File? _selectedDocument; // Stores the selected ID document
-  File? _selfieImage; // Stores the captured selfie
+  File? _selfieImage; // Stores the captured image
   bool _acceptedTerms = false; // Tracks terms and conditions acceptance
   bool _isLoading = false; // Shows loading state during submission
   
-  // Image picker instance for camera/gallery access
+  // Image picker instance for camera and gallery access
   final ImagePicker _picker = ImagePicker();
   
   // Step tracking for multi-step form experience
@@ -40,7 +40,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     super.dispose();
   }
 
-  // STEP 1: Mobile number validation with proper formatting
+  // Mobile number validation
   String? _validateMobileNumber(String? value) {
     if (value == null || value.isEmpty) {
       return 'Mobile number is required';
@@ -53,7 +53,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     return null;
   }
 
-  // STEP 2: Email validation with proper regex pattern
+  //Email validation
   String? _validateEmail(String? value) {
     if (value == null || value.isEmpty) {
       return 'Email address is required';
@@ -66,7 +66,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     return null;
   }
 
-  // STEP 3: Full name validation
+  //Full name validation
   String? _validateFullName(String? value) {
     if (value == null || value.isEmpty) {
       return 'Full name is required';
@@ -81,12 +81,12 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     return null;
   }
 
-  // STEP 4: Document upload functionality with file type validation
+  // Document upload functionality with file type validation
   Future<void> _pickDocument() async {
     try {
       FilePickerResult? result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
-        allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png'], // Supported formats
+        allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png'],
         allowMultiple: false,
       );
 
@@ -116,13 +116,16 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     }
   }
 
-  // STEP 5: Selfie capture functionality with camera access
+  // Selfie capture functionality 
   Future<void> _captureSelfie() async {
     try {
       final XFile? image = await _picker.pickImage(
-        source: ImageSource.camera, // Force camera usage for selfie
-        preferredCameraDevice: CameraDevice.front, // Use front camera
-        imageQuality: 80, // Optimize image quality vs file size
+       // Force camera usage for selfie
+        source: ImageSource.camera, 
+        // Use front camera
+        preferredCameraDevice: CameraDevice.front, 
+         // Optimize image quality vs file size
+        imageQuality: 80,
         maxWidth: 800,
         maxHeight: 800,
       );
@@ -153,7 +156,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     }
   }
 
-  // STEP 6: Form submission with validation and OTP initiation
+  // Form submission with validation and OTP initiation
   Future<void> _submitRegistration() async {
     // Validate all form fields
     if (!_formKey.currentState!.validate()) {
@@ -204,14 +207,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     try {
       // Simulate API call for registration
       await Future.delayed(Duration(seconds: 2));
-      
-      // TODO: Implement actual registration API call here
-      // This would typically involve:
-      // 1. Uploading the document and selfie to cloud storage
-      // 2. Sending user data to your backend
-      // 3. Initiating OTP verification process
-      
-      // For now, show success and navigate to OTP screen
+      // showing success and navigate to OTP screen
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Registration successful! Please verify your mobile number.'),
@@ -220,10 +216,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
           duration: Duration(seconds: 3),
         ),
       );
-      
-      // Navigate to OTP verification screen (to be implemented)
-      // Navigator.pushNamed(context, '/otp-verification');
-      
     } catch (e) {
       // Handle registration errors
       ScaffoldMessenger.of(context).showSnackBar(
@@ -241,7 +233,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     }
   }
 
-  // STEP 7: Build progress indicator for multi-step experience
+  // Build progress indicator for multi-step experience
   Widget _buildProgressIndicator() {
     return Container(
       padding: EdgeInsets.symmetric(vertical: 20),
@@ -264,7 +256,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     );
   }
 
-  // STEP 8: Build form input field with consistent styling
+  // Build form input field with consistent styling
   Widget _buildInputField({
     required TextEditingController controller,
     required String label,
@@ -304,7 +296,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     );
   }
 
-  // STEP 9: Build file upload card with visual feedback
+  //Build file upload card with visual feedback
   Widget _buildFileUploadCard({
     required String title,
     required IconData icon,
@@ -358,7 +350,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // STEP 10: App bar with back navigation and title
+      //App bar with back navigation and title
       appBar: AppBar(
         title: Text('Create Account'),
         centerTitle: true,
@@ -368,7 +360,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       ),
       
       body: Container(
-        // STEP 11: Gradient background for visual appeal
+        //Gradient background for visual appeal
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
@@ -388,7 +380,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // STEP 12: Welcome header section
+                  // Welcome header section
                   Container(
                     padding: EdgeInsets.symmetric(vertical: 20),
                     child: Column(
@@ -419,10 +411,10 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                     ),
                   ),
 
-                  // STEP 13: Progress indicator
+                  //Progress indicator
                   _buildProgressIndicator(),
 
-                  // STEP 14: Personal information section
+                  //Personal information section
                   Card(
                     elevation: 4,
                     shape: RoundedRectangleBorder(
@@ -442,8 +434,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                             ),
                           ),
                           SizedBox(height: 24),
-
-                          // Full name input field
                           _buildInputField(
                             controller: _fullNameController,
                             label: 'Full Name',
@@ -452,8 +442,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                             validator: _validateFullName,
                             keyboardType: TextInputType.name,
                           ),
-
-                          // Mobile number input field with formatting
                           _buildInputField(
                             controller: _mobileController,
                             label: 'Mobile Number',
@@ -466,8 +454,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                               LengthLimitingTextInputFormatter(15),
                             ],
                           ),
-
-                          // Email input field
                           _buildInputField(
                             controller: _emailController,
                             label: 'Email Address',
@@ -482,8 +468,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                   ),
 
                   SizedBox(height: 24),
-
-                  // STEP 15: Document verification section
+                  // Document verification section
                   Card(
                     elevation: 4,
                     shape: RoundedRectangleBorder(
@@ -511,7 +496,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                             ),
                           ),
                           SizedBox(height: 24),
-
                           // Document and selfie upload cards
                           Row(
                             children: [
@@ -542,8 +526,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                   ),
 
                   SizedBox(height: 24),
-
-                  // STEP 16: Terms and conditions section
                   Card(
                     elevation: 4,
                     shape: RoundedRectangleBorder(
@@ -609,8 +591,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                   ),
 
                   SizedBox(height: 32),
-
-                  // STEP 17: Submit button with loading state
+                  //Submit button
                   ElevatedButton(
                     onPressed: _isLoading ? null : _submitRegistration,
                     style: ElevatedButton.styleFrom(
@@ -649,7 +630,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
 
                   SizedBox(height: 24),
 
-                  // STEP 18: Login redirect for existing users
+                  //Login redirect
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [

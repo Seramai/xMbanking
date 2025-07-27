@@ -12,8 +12,6 @@ dependencies:
 
   # UI Icons
   cupertino_icons: ^1.0.8
-  
-  # 🔥 REQUIRED FOR REGISTRATION FORM - LATEST COMPATIBLE VERSIONS:
   # Image picker for camera and gallery access
   image_picker: ^1.0.4
   
@@ -25,6 +23,8 @@ dependencies:
   
   # Path provider for file system access
   path_provider: ^2.1.1
+  # Local authentication for biometric login (fingerprint/face recognition)
+  local_auth: ^2.1.6
 
 dev_dependencies:
   flutter_test:
