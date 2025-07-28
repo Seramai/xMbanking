@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
 import 'dart:io';
+import 'package:permission_handler/permission_handler.dart';
 
 class RegistrationScreen extends StatefulWidget {
   @override
@@ -82,79 +83,100 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   }
 
   // Document upload functionality with file type validation
-  Future<void> _pickDocument() async {
-    try {
-      FilePickerResult? result = await FilePicker.platform.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png'],
-        allowMultiple: false,
-      );
+Future<void> _pickDocument() async {
+  print("DEBUG: _pickDocument method called - should open FILE PICKER");
+  try {
+    FilePickerResult? result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png'],
+      allowMultiple: false,
+    );
 
-      if (result != null && result.files.single.path != null) {
-        setState(() {
-          _selectedDocument = File(result.files.single.path!);
-        });
-        
-        // Show success feedback to user
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Document uploaded successfully'),
-            backgroundColor: Colors.green,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-    } catch (e) {
-      // Handle file picker errors gracefully
+    if (result != null) {
+      // Store the PlatformFile instead of File
+      setState(() {
+        _selectedDocument = File(result.files.single.path!);
+      });
+      
+      // Show success feedback to user
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error picking document: ${e.toString()}'),
-          backgroundColor: Colors.red,
+          content: Text('Document uploaded successfully: ${result.files.single.name}'),
+          backgroundColor: Colors.green,
           behavior: SnackBarBehavior.floating,
         ),
       );
     }
+  } catch (e) {
+    // Handle file picker errors gracefully
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Error picking document: ${e.toString()}'),
+        backgroundColor: Colors.red,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
+}
 
   // Selfie capture functionality 
-  Future<void> _captureSelfie() async {
-    try {
-      final XFile? image = await _picker.pickImage(
-       // Force camera usage for selfie
-        source: ImageSource.camera, 
-        // Use front camera
-        preferredCameraDevice: CameraDevice.front, 
-         // Optimize image quality vs file size
-        imageQuality: 80,
-        maxWidth: 800,
-        maxHeight: 800,
-      );
-
-      if (image != null) {
-        setState(() {
-          _selfieImage = File(image.path);
-        });
-        
-        // Show success feedback
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Selfie captured successfully'),
-            backgroundColor: Colors.green,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-    } catch (e) {
-      // Handle camera access errors
+Future<void> _captureSelfie() async {
+  print("DEBUG: _captureSelfie method called - should open CAMERA");
+  
+  try {
+    final permission = await Permission.camera.request();
+    print("DEBUG: Camera permission status: $permission");
+    
+    if (permission != PermissionStatus.granted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error accessing camera: ${e.toString()}'),
+          content: Text('Camera permission denied. Please enable camera access in settings.'),
           backgroundColor: Colors.red,
           behavior: SnackBarBehavior.floating,
         ),
       );
+      return;
     }
+    
+    print("DEBUG: About to call pickImage with ImageSource.camera");
+    final XFile? image = await _picker.pickImage(
+      source: ImageSource.camera,
+      preferredCameraDevice: CameraDevice.rear, 
+      imageQuality: 80,
+      maxWidth: 800,
+      maxHeight: 800,
+    );
+
+    print("DEBUG: pickImage completed. Image path: ${image?.path ?? 'null'}");
+
+    if (image != null) {
+      setState(() {
+        _selfieImage = File(image.path);
+      });
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Photo captured successfully!'),
+          backgroundColor: Colors.green,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } else {
+      print("DEBUG: User cancelled or no image captured");
+    }
+  } catch (e) {
+    print("DEBUG: Camera error - $e");
+    print("DEBUG: Error type: ${e.runtimeType}");
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Camera error: ${e.toString()}'),
+        backgroundColor: Colors.red,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
+}
 
   // Form submission with validation and OTP initiation
   Future<void> _submitRegistration() async {
