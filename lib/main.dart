@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'Screens/registration_screen.dart';
 import 'Screens/login_screen.dart';
+import 'Screens/forgot_pin_screen.dart';
+import 'Screens/otp_verification_screen.dart';
 
 void main() {
   runApp(const MyApp());
@@ -16,11 +18,18 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
-      // routes for better navigation management
       routes: {
-        '/': (context) => const MyHomePage(title: 'Flutter Demo Home Page'),
-        '/registration': (context) => RegistrationScreen(),
-        '/login': (context)=> LoginScreen(),
+        // '/': (context) => const MyHomePage(title: 'Flutter Demo Home Page'),
+        '/': (context) =>  const RegistrationScreen(),
+        '/login': (context) =>  LoginScreen(),
+        '/forgot-pin': (context) => const ForgotPinScreen(),
+        '/otp-verification': (context) {
+            final args = ModalRoute.of(context)!.settings.arguments as Map<String, String>?;
+            return OTPVerificationScreen(
+              email: args?['email'] ?? '',
+              mobileNumber: args?['mobileNumber'] ?? '',
+            );
+},
       },
       initialRoute: '/',
     );
@@ -47,9 +56,10 @@ class _MyHomePageState extends State<MyHomePage> {
 
   // Function to navigate to registration screen
   void _navigateToRegistration() {
-    Navigator.pushNamed(context, '/registration');
+    Navigator.pushNamed(context, '/');
   }
-  void _navigateToLogin(){
+  
+  void _navigateToLogin() {
     Navigator.pushNamed(context, '/login');
   }
 
@@ -59,7 +69,7 @@ class _MyHomePageState extends State<MyHomePage> {
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         title: Text(widget.title),
-        //button to navigate to registration
+        // button to navigate to registration
         actions: [
           IconButton(
             onPressed: _navigateToRegistration,
@@ -82,7 +92,7 @@ class _MyHomePageState extends State<MyHomePage> {
               '$_counter',
               style: Theme.of(context).textTheme.headlineMedium,
             ),
-            //button to navigate to registration screen
+            // button to navigate to registration screen
             const SizedBox(height: 20),
             ElevatedButton(
               onPressed: _navigateToRegistration,
