@@ -128,8 +128,6 @@ class _ForgotPinScreenState extends State<ForgotPinScreen> {
           backgroundColor: Colors.green,
         ),
       );
-
-      // Navigate back to login screen
       Navigator.pushReplacementNamed(context, '/login');
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -186,8 +184,6 @@ class _ForgotPinScreenState extends State<ForgotPinScreen> {
           ),
         ),
         const SizedBox(height: 24),
-
-        // Verify button
         SizedBox(
           width: double.infinity,
           child: ElevatedButton(
@@ -219,7 +215,6 @@ class _ForgotPinScreenState extends State<ForgotPinScreen> {
       ],
     );
   }
-
   Widget _buildNewPinStep() {
     return Column(
       children: [
@@ -240,8 +235,6 @@ class _ForgotPinScreenState extends State<ForgotPinScreen> {
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 24),
-
-        // New PIN field
         TextFormField(
           controller: _newPinController,
           validator: _validateNewPin,
@@ -270,8 +263,6 @@ class _ForgotPinScreenState extends State<ForgotPinScreen> {
           ),
         ),
         const SizedBox(height: 16),
-
-        // Confirm PIN field
         TextFormField(
           controller: _confirmPinController,
           validator: _validateConfirmPin,
@@ -300,8 +291,6 @@ class _ForgotPinScreenState extends State<ForgotPinScreen> {
           ),
         ),
         const SizedBox(height: 24),
-
-        // Update PIN button
         SizedBox(
           width: double.infinity,
           child: ElevatedButton(
@@ -332,8 +321,6 @@ class _ForgotPinScreenState extends State<ForgotPinScreen> {
         ),
 
         const SizedBox(height: 16),
-
-        // Back button
         SizedBox(
           width: double.infinity,
           child: OutlinedButton(
@@ -351,7 +338,6 @@ class _ForgotPinScreenState extends State<ForgotPinScreen> {
       ],
     );
   }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -410,8 +396,6 @@ class _ForgotPinScreenState extends State<ForgotPinScreen> {
                   ],
                 ),
                 const SizedBox(height: 40),
-
-                // Main form card
                 Card(
                   elevation: 8,
                   shape: RoundedRectangleBorder(
@@ -429,8 +413,6 @@ class _ForgotPinScreenState extends State<ForgotPinScreen> {
                 ),
                 
                 const SizedBox(height: 24),
-                
-                // Back to login link
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [

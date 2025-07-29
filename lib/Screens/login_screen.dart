@@ -1,10 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:local_auth/local_auth.dart';class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+import 'package:local_auth/local_auth.dart';
+import 'dart:io';
+import 'dart:typed_data';
+
+class LoginScreen extends StatefulWidget {
+  final Uint8List? profileImageBytes;
+  final File? profileImageFile;
+  
+  const LoginScreen({
+    super.key,
+    this.profileImageBytes,
+    this.profileImageFile,
+  });
+
   @override
   _LoginScreenState createState() => _LoginScreenState();
 }
+
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _usernameController = TextEditingController();
@@ -14,17 +27,20 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _isBiometricAvailable = false;
   bool _rememberMe = false;
   final LocalAuthentication _localAuth = LocalAuthentication();
+
   @override
   void initState() {
     super.initState();
     _checkBiometricAvailability();
   }
+
   @override
   void dispose() {
     _usernameController.dispose();
     _pinController.dispose();
     super.dispose();
   }
+
   Future<void> _checkBiometricAvailability() async {
     try {
       final bool isAvailable = await _localAuth.canCheckBiometrics;
@@ -39,6 +55,7 @@ class _LoginScreenState extends State<LoginScreen> {
       });
     }
   }
+
   String? _validateUsername(String? value) {
     if (value == null || value.isEmpty) {
       return 'Username is required';
@@ -48,6 +65,7 @@ class _LoginScreenState extends State<LoginScreen> {
     }
     return null;
   }
+
   String? _validatePin(String? value) {
     if (value == null || value.isEmpty) {
       return 'PIN is required';
@@ -60,13 +78,16 @@ class _LoginScreenState extends State<LoginScreen> {
     }
     return null;
   }
+
   Future<void> _performLogin() async {
     if (!_formKey.currentState!.validate()) {
       return;
     }
+
     setState(() {
       _isLoading = true;
     });
+
     try {
       await Future.delayed(const Duration(seconds: 2));
       ScaffoldMessenger.of(context).showSnackBar(
@@ -89,6 +110,7 @@ class _LoginScreenState extends State<LoginScreen> {
       });
     }
   }
+
   Future<void> _performBiometricLogin() async {
     try {
       setState(() {
@@ -150,6 +172,17 @@ class _LoginScreenState extends State<LoginScreen> {
             ElevatedButton(
               onPressed: () {
                 Navigator.of(context).pop();
+                Navigator.pushNamedAndRemoveUntil(
+                  context,
+                  '/dashboard',
+                  (route) => false,
+                  arguments: {
+                    'username': _usernameController.text,
+                    'email': 'winniejomo17@gmail.com',
+                    'profileImageBytes': widget.profileImageBytes,
+                    'profileImageFile': widget.profileImageFile,
+                  },
+                );
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Theme.of(context).primaryColor,
@@ -162,9 +195,11 @@ class _LoginScreenState extends State<LoginScreen> {
       },
     );
   }
-  void _handleForgotPin(){
+
+  void _handleForgotPin() {
     Navigator.pushNamed(context, '/forgot-pin');
   }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -300,8 +335,6 @@ class _LoginScreenState extends State<LoginScreen> {
                             ],
                           ),
                           const SizedBox(height: 24),
-
-                          // Login button
                           SizedBox(
                             width: double.infinity,
                             child: ElevatedButton(
@@ -330,7 +363,6 @@ class _LoginScreenState extends State<LoginScreen> {
                                   : const Text('Sign In'),
                             ),
                           ),
-                          // Biometric button
                           if (_isBiometricAvailable) ...[
                             const SizedBox(height: 16),
                             SizedBox(
@@ -346,8 +378,6 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                           ],
                           const SizedBox(height: 24),
-                          
-                          // Register link
                           Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [

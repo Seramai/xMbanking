@@ -3,6 +3,11 @@ import 'Screens/registration_screen.dart';
 import 'Screens/login_screen.dart';
 import 'Screens/forgot_pin_screen.dart';
 import 'Screens/otp_verification_screen.dart';
+import 'Screens/dashboard_screen.dart';
+import 'Screens/user_profile_screen.dart';
+import 'Screens/notifications_screen.dart';
+import 'dart:io';
+import 'dart:typed_data';
 
 void main() {
   runApp(const MyApp());
@@ -19,17 +24,45 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
       routes: {
-        // '/': (context) => const MyHomePage(title: 'Flutter Demo Home Page'),
-        '/': (context) =>  const RegistrationScreen(),
-        '/login': (context) =>  LoginScreen(),
+        '/': (context) => const RegistrationScreen(),
+        '/login': (context) {
+          final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+          return LoginScreen(
+            // Pass profile image data if available
+            profileImageBytes: args?['profileImageBytes'],
+            profileImageFile: args?['profileImageFile'],
+          );
+        },
         '/forgot-pin': (context) => const ForgotPinScreen(),
         '/otp-verification': (context) {
-            final args = ModalRoute.of(context)!.settings.arguments as Map<String, String>?;
-            return OTPVerificationScreen(
-              email: args?['email'] ?? '',
-              mobileNumber: args?['mobileNumber'] ?? '',
-            );
-},
+          final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>?;
+          return OTPVerificationScreen(
+            email: args?['email'] ?? '',
+            mobileNumber: args?['mobileNumber'] ?? '',
+            profileImageBytes: args?['profileImageBytes'],
+            profileImageFile: args?['profileImageFile'],
+            fullName: args?['fullName'],
+          );
+        },
+        '/dashboard': (context) {
+          final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>?;
+          return DashboardScreen(
+            username: args?['username'] ?? 'User',
+            email: args?['email'] ?? 'user@example.com',
+            profileImageBytes: args?['profileImageBytes'],
+            profileImageFile: args?['profileImageFile'],
+          );
+        },
+        '/profile': (context) {
+          final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>?;
+          return UserProfileScreen(
+            username: args?['username'] ?? 'User',
+            email: args?['email'] ?? 'user@example.com',
+            profileImageFile: args?['profileImageFile'],
+            profileImageBytes: args?['profileImageBytes'],
+          );
+        },
+        '/notifications': (context) => const NotificationsScreen(),
       },
       initialRoute: '/',
     );
@@ -54,7 +87,6 @@ class _MyHomePageState extends State<MyHomePage> {
     });
   }
 
-  // Function to navigate to registration screen
   void _navigateToRegistration() {
     Navigator.pushNamed(context, '/');
   }
@@ -69,7 +101,6 @@ class _MyHomePageState extends State<MyHomePage> {
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         title: Text(widget.title),
-        // button to navigate to registration
         actions: [
           IconButton(
             onPressed: _navigateToRegistration,
@@ -92,7 +123,6 @@ class _MyHomePageState extends State<MyHomePage> {
               '$_counter',
               style: Theme.of(context).textTheme.headlineMedium,
             ),
-            // button to navigate to registration screen
             const SizedBox(height: 20),
             ElevatedButton(
               onPressed: _navigateToRegistration,

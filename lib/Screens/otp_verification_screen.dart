@@ -1,18 +1,29 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'dart:async';
+import 'dart:io';
+import 'dart:typed_data';
 
 class OTPVerificationScreen extends StatefulWidget {
   final String email;
   final String mobileNumber;
+  final String? fullName;
+  final Uint8List? profileImageBytes;
+  final File? profileImageFile;
+  
   const OTPVerificationScreen({
     super.key,
     required this.email,
     required this.mobileNumber,
+    this.fullName,
+    this.profileImageBytes,
+    this.profileImageFile,
   });
+  
   @override
   _OTPVerificationScreenState createState() => _OTPVerificationScreenState();
 }
+
 class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
   final List<TextEditingController> _otpControllers = List.generate(6, (index) => TextEditingController());
   final List<FocusNode> _focusNodes = List.generate(6, (index) => FocusNode());
@@ -20,11 +31,13 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
   bool _isResending = false;
   int _resendTimer = 60;
   Timer? _timer;
+
   @override
   void initState() {
     super.initState();
     _startResendTimer();
   }
+
   @override
   void dispose() {
     for (var controller in _otpControllers) {
@@ -36,6 +49,7 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
     _timer?.cancel();
     super.dispose();
   }
+
   void _startResendTimer() {
     _resendTimer = 60;
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
@@ -48,12 +62,15 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
       });
     });
   }
+
   String _getOTPCode() {
     return _otpControllers.map((controller) => controller.text).join();
   }
+
   bool _isOTPComplete() {
     return _getOTPCode().length == 6;
   }
+
   void _onOTPChanged(String value, int index) {
     if (value.isNotEmpty && index < 5) {
       _focusNodes[index + 1].requestFocus();
@@ -93,11 +110,17 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
             backgroundColor: Colors.green,
           ),
         );
-        // Navigate to login screen
         Navigator.pushNamedAndRemoveUntil(
           context, 
           '/login', 
           (route) => false,
+          arguments: {
+            'email': widget.email,
+            'mobileNumber': widget.mobileNumber,
+            'fullName': widget.fullName,
+            'profileImageBytes': widget.profileImageBytes,
+            'profileImageFile': widget.profileImageFile,
+          },
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -121,12 +144,14 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
       });
     }
   }
+
   void _clearOTP() {
     for (var controller in _otpControllers) {
       controller.clear();
     }
     _focusNodes[0].requestFocus();
   }
+
   Future<void> _resendOTP() async {
     if (_resendTimer > 0) return;
 
@@ -140,7 +165,7 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
       
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('OTP sent to ${widget.email}'),
+          content: Text('OTP resent to ${widget.email}'),
           backgroundColor: Colors.green,
         ),
       );
@@ -158,6 +183,7 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
       });
     }
   }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -197,7 +223,6 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
               ),
             ),
             const SizedBox(height: 40),
-            // OTP Input Fields
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: List.generate(6, (index) {
@@ -236,7 +261,6 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
               }),
             ),
             const SizedBox(height: 40),
-            // Verification Button
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
@@ -269,7 +293,6 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
               ),
             ),
             const SizedBox(height: 24),
-            // Resend OTP
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -296,6 +319,7 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
               ],
             ),
             const SizedBox(height: 20),
+            
             // Clear button
             TextButton(
               onPressed: _clearOTP,
