@@ -21,14 +21,19 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Flutter Demo',
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Color(0xFF1A237E), 
+          primary: Color(0xFF1A237E),
+          secondary: Color(0xFF303F9F), 
+        ),
+        primaryColor: Color(0xFF1A237E),
       ),
       routes: {
-        '/': (context) => const RegistrationScreen(),
+        '/': (context) => const LoginScreen(),
+        '/register': (context) => const RegistrationScreen(),
         '/login': (context) {
           final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
           return LoginScreen(
-            // Pass profile image data if available
             profileImageBytes: args?['profileImageBytes'],
             profileImageFile: args?['profileImageFile'],
           );
@@ -88,7 +93,7 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   void _navigateToRegistration() {
-    Navigator.pushNamed(context, '/');
+    Navigator.pushNamed(context, '/register');
   }
   
   void _navigateToLogin() {

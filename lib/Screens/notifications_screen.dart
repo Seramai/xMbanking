@@ -181,7 +181,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              Theme.of(context).primaryColor.withOpacity(0.1),
+              Color(0xFF1A237E).withOpacity(0.1),
               Colors.white,
             ],
           ),
@@ -233,7 +233,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                         border: notification.isRead
                             ? null
                             : Border.all(
-                                color: Theme.of(context).primaryColor.withOpacity(0.3),
+                                color: Color(0xFF1A237E).withOpacity(0.1),
                                 width: 1,
                               ),
                       ),

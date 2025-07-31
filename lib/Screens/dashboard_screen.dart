@@ -4,6 +4,9 @@ import 'user_profile_screen.dart';
 import 'notifications_screen.dart';
 import 'dart:io';
 import 'dart:typed_data';
+import 'deposit_dialog.dart';
+import 'withdraw_dialog.dart';
+
 
 class DashboardScreen extends StatefulWidget {
   final String username;
@@ -25,11 +28,11 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   bool _isBalanceVisible = true;
-  final double _accountBalance = 12500.00;
+  double _accountBalance = 12500.00;
   final int _numberOfAccounts = 2;
   final int _notificationCount = 3;
 
-  final List<Transaction> _miniStatement = [
+  List<Transaction> _miniStatement = [
     Transaction(
       date: DateTime.now().subtract(const Duration(days: 1)),
       description: "MPESA Deposit",
@@ -102,8 +105,104 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  void _handleDeposit() {}
-  void _handleWithdraw() {}
+    void _handleDeposit() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return DepositDialog(
+          onDepositSuccess: (double amount, String phoneNumber) {
+            // Updates the account balance 
+            setState(() {
+              _accountBalance += amount;
+              
+              // Add the new transaction to the mini statement
+              _miniStatement.insert(0, Transaction(
+                date: DateTime.now(),
+                description: "Mobile Deposit",
+                amount: amount,
+                type: TransactionType.credit,
+                icon: Icons.phone_android,
+              ));
+              
+              // Keeps only the last 5 transactions for the mini statement
+              if (_miniStatement.length > 5) {
+                _miniStatement.removeRange(5, _miniStatement.length);
+              }
+            });
+            
+            // Show success snackbar
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Row(
+                  children: [
+                    const Icon(Icons.check_circle, color: Colors.white),
+                    const SizedBox(width: 8),
+                    Text('Successfully deposited KES ${amount.toStringAsFixed(2)}'),
+                  ],
+                ),
+                backgroundColor: Colors.green,
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                duration: const Duration(seconds: 3),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+    void _handleWithdraw() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return WithdrawDialog(
+          currentBalance: _accountBalance,
+          onWithdrawSuccess: (double amount, String phoneNumber) {
+            // Updates the account balance
+            setState(() {
+              _accountBalance -= amount;
+              
+              // Add the new withdrawal transaction to the mini statement
+              _miniStatement.insert(0, Transaction(
+                date: DateTime.now(),
+                description: "Mobile Withdrawal",
+                 // Negative amount for withdrawal
+                amount: -amount,
+                type: TransactionType.debit,
+                icon: Icons.phone_android,
+              ));
+              
+              // Keep only the last 5 transactions for the mini statement
+              if (_miniStatement.length > 5) {
+                _miniStatement.removeRange(5, _miniStatement.length);
+              }
+            });
+            
+            // Show success snackbar
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Row(
+                  children: [
+                    const Icon(Icons.check_circle, color: Colors.white),
+                    const SizedBox(width: 8),
+                    Text('Successfully withdrew KES ${amount.toStringAsFixed(2)}'),
+                  ],
+                ),
+                backgroundColor: Colors.orange,
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                duration: const Duration(seconds: 3),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
   void _viewFullStatement() {}
 
   Widget _buildProfileImage() {
@@ -140,8 +239,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [
-                    Theme.of(context).primaryColor.withOpacity(0.8),
-                    Theme.of(context).primaryColor.withOpacity(0.6),
+                     Color(0xFF0D1B4A),  
+                     Color(0xFF1A237E), 
                   ],
                 ),
                 borderRadius: const BorderRadius.only(
@@ -529,7 +628,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 child: _buildQuickActionItem(
                                   icon: Icons.phone_android,
                                   title: 'Mobile Money',
-                                  color: Colors.green,
+                                  color: Color(0xFF1A237E).withOpacity(0.8),
                                   onTap: () {},
                                 ),
                               ),
@@ -538,7 +637,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 child: _buildQuickActionItem(
                                   icon: Icons.history,
                                   title: 'History',
-                                  color: Colors.purple,
+                                  color: Color(0xFF1A237E).withOpacity(0.8),
                                   onTap: _viewFullStatement,
                                 ),
                               ),

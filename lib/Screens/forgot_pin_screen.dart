@@ -14,13 +14,13 @@ class _ForgotPinScreenState extends State<ForgotPinScreen> {
   final _emailController = TextEditingController();
   final _newPinController = TextEditingController();
   final _confirmPinController = TextEditingController();
-  
+  // masking of the pin numbers
   bool _isNewPinVisible = false;
   bool _isConfirmPinVisible = false;
   bool _isLoading = false;
   // 0: verification, 1: new PIN setup
   int _currentStep = 0; 
-
+// they are disposed in the dispose method to prevent memory leak
   @override
   void dispose() {
     _usernameController.dispose();
@@ -77,7 +77,7 @@ class _ForgotPinScreenState extends State<ForgotPinScreen> {
     if (!_formKey.currentState!.validate()) {
       return;
     }
-
+// loading of the UI and preventing duplicate submissions
     setState(() {
       _isLoading = true;
     });

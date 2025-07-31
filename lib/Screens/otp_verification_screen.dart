@@ -197,8 +197,6 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
         child: Column(
           children: [
             const SizedBox(height: 40),
-            
-            // Header
             const Icon(
               Icons.mark_email_read,
               size: 80,
@@ -319,8 +317,6 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
               ],
             ),
             const SizedBox(height: 20),
-            
-            // Clear button
             TextButton(
               onPressed: _clearOTP,
               child: const Text('Clear'),

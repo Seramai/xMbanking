@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'dart:io'; // For File handling
-import 'dart:typed_data'; // For Uint8List
-import 'package:flutter/foundation.dart'; // For kIsWeb
+import 'dart:io'; 
+import 'dart:typed_data';
+import 'package:flutter/foundation.dart'; 
 
 class UserProfileScreen extends StatelessWidget {
   final String username;
@@ -25,7 +25,7 @@ class UserProfileScreen extends StatelessWidget {
         return AlertDialog(
           title: const Row(
             children: [
-              Icon(Icons.logout, color: Colors.red),
+              Icon(Icons.logout, color: Color.fromARGB(255, 25, 35, 126)),
               SizedBox(width: 8),
               Text('Logout Confirmation'),
             ],
@@ -47,7 +47,7 @@ class UserProfileScreen extends StatelessWidget {
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.red,
-                foregroundColor: Colors.white,
+                foregroundColor: const Color.fromARGB(255, 255, 255, 255),
               ),
               child: const Text('Logout'),
             ),
@@ -101,7 +101,7 @@ class UserProfileScreen extends StatelessWidget {
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              Theme.of(context).primaryColor.withOpacity(0.1),
+              Color(0xFFF8F9FA).withOpacity(0.1),
               Colors.white,
             ],
           ),
@@ -116,7 +116,7 @@ class UserProfileScreen extends StatelessWidget {
                   width: 120,
                   height: 120,
                   decoration: BoxDecoration(
-                    color: Theme.of(context).primaryColor.withOpacity(0.1),
+                    color: Color(0xFF1A237E).withOpacity(0.1),
                     shape: BoxShape.circle,
                     border: Border.all(
                       color: Theme.of(context).primaryColor,
