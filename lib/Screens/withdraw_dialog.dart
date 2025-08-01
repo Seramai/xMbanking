@@ -52,7 +52,6 @@ class _WithdrawDialogState extends State<WithdrawDialog> {
     if (value == null || value.isEmpty) {
       return 'Please enter phone number';
     }
-    // Remove any spaces or special characters
     String cleanedPhone = value.replaceAll(RegExp(r'[^\d]'), '');
     if (cleanedPhone.startsWith('254') && cleanedPhone.length == 12) {
       return null;
@@ -120,6 +119,7 @@ class _WithdrawDialogState extends State<WithdrawDialog> {
   @override
   Widget build(BuildContext context) {
     return Dialog(
+      backgroundColor: Colors.white,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
       ),
@@ -164,12 +164,11 @@ class _WithdrawDialogState extends State<WithdrawDialog> {
               ),
               const SizedBox(height: 16),
               
-              // Available Balance
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.blue.shade50,
+                  color: Colors.white,
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(color: Colors.blue.shade200),
                 ),
@@ -224,7 +223,7 @@ class _WithdrawDialogState extends State<WithdrawDialog> {
                     borderSide: BorderSide(color: Colors.red),
                   ),
                   filled: true,
-                  fillColor: Colors.grey.shade50,
+                  fillColor: Colors.white,
                   contentPadding: const EdgeInsets.symmetric(
                     horizontal: 16,
                     vertical: 16,
@@ -266,7 +265,7 @@ class _WithdrawDialogState extends State<WithdrawDialog> {
                     borderSide: BorderSide(color: Colors.red),
                   ),
                   filled: true,
-                  fillColor: Colors.grey.shade50,
+                  fillColor: Colors.white,
                   contentPadding: const EdgeInsets.symmetric(
                     horizontal: 16,
                     vertical: 16,
@@ -326,7 +325,7 @@ class _WithdrawDialogState extends State<WithdrawDialog> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.orange.shade50,
+                  color: Colors.white,
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(color: Colors.orange.shade200),
                 ),
@@ -405,7 +404,6 @@ class _WithdrawStkPushDialogState extends State<WithdrawStkPushDialog>
 
     _animationController.repeat(reverse: true);
     _startCountdown();
-    // Simulating successful transaction after 5 seconds
     Future.delayed(const Duration(seconds: 5), () {
       if (mounted) {
         _showSuccessMessage();
@@ -443,6 +441,7 @@ class _WithdrawStkPushDialogState extends State<WithdrawStkPushDialog>
       barrierDismissible: false,
       builder: (BuildContext context) {
         return Dialog(
+          backgroundColor: Colors.white,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),
@@ -454,7 +453,7 @@ class _WithdrawStkPushDialogState extends State<WithdrawStkPushDialog>
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: Colors.green.shade100,
+                    color: Colors.white,
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
@@ -519,6 +518,7 @@ class _WithdrawStkPushDialogState extends State<WithdrawStkPushDialog>
   @override
   Widget build(BuildContext context) {
     return Dialog(
+      backgroundColor: Colors.white,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
       ),
@@ -535,7 +535,7 @@ class _WithdrawStkPushDialogState extends State<WithdrawStkPushDialog>
                   child: Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: Colors.orange.shade100,
+                      color: Colors.white,
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
@@ -568,7 +568,7 @@ class _WithdrawStkPushDialogState extends State<WithdrawStkPushDialog>
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.grey.shade100,
+                color: Colors.white,
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Column(

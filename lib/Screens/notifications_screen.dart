@@ -9,7 +9,6 @@ class NotificationsScreen extends StatefulWidget {
 }
 
 class _NotificationsScreenState extends State<NotificationsScreen> {
-  // notification data
   final List<NotificationItem> _notifications = [
     NotificationItem(
       id: '1',
@@ -60,6 +59,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       isRead: false,
     ),
   ];
+  final Color darkBlue = const Color(0xFF1A237E);
 
   int get _unreadCount => _notifications.where((n) => !n.isRead).length;
 
@@ -80,7 +80,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     });
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('All notifications marked as read'),
+        content: Text('All notifications marked as read', style: TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: Colors.green,
       ),
     );
@@ -92,7 +92,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     });
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('Notification deleted'),
+        content: Text('Notification deleted', style: TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: Colors.orange,
       ),
     );
@@ -105,7 +105,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       case NotificationType.security:
         return Colors.red;
       case NotificationType.account:
-        return Colors.blue;
+        return darkBlue;
       case NotificationType.system:
         return Colors.orange;
       case NotificationType.reminder:
@@ -134,7 +134,11 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       appBar: AppBar(
         title: Row(
           children: [
-            const Text('Notifications'),
+            const Text('NOTIFICATIONS', style: TextStyle(
+              fontWeight: FontWeight.w900,
+              fontSize: 18,
+              letterSpacing: 0.5,
+            )),
             if (_unreadCount > 0) ...[
               const SizedBox(width: 8),
               Container(
@@ -155,7 +159,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             ],
           ],
         ),
-        backgroundColor: Theme.of(context).primaryColor,
+        backgroundColor: darkBlue,
         foregroundColor: Colors.white,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
@@ -166,51 +170,46 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             TextButton(
               onPressed: _markAllAsRead,
               child: const Text(
-                'Mark All Read',
+                'MARK ALL READ',
                 style: TextStyle(
                   color: Colors.white,
-                  fontWeight: FontWeight.bold,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 14,
+                  letterSpacing: 0.5,
                 ),
               ),
             ),
         ],
       ),
       body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Color(0xFF1A237E).withOpacity(0.1),
-              Colors.white,
-            ],
-          ),
-        ),
+        color: Colors.white,
         child: _notifications.isEmpty
-            ? const Center(
+            ? Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Icon(
                       Icons.notifications_off,
                       size: 80,
-                      color: Colors.grey,
+                      color: Colors.grey[600],
                     ),
-                    SizedBox(height: 16),
+                    const SizedBox(height: 16),
                     Text(
-                      'No notifications',
+                      'NO NOTIFICATIONS',
                       style: TextStyle(
-                        fontSize: 18,
-                        color: Colors.grey,
-                        fontWeight: FontWeight.bold,
+                        fontSize: 20,
+                        color: Colors.grey[700],
+                        fontWeight: FontWeight.w900, 
+                        letterSpacing: 0.5,
                       ),
                     ),
-                    SizedBox(height: 8),
+                    const SizedBox(height: 8),
                     Text(
                       'You\'re all caught up!',
                       style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey,
+                        fontSize: 16,
+                        color: Colors.grey[600],
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ],
@@ -223,17 +222,18 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                   final notification = _notifications[index];
                   return Card(
                     margin: const EdgeInsets.only(bottom: 12),
-                    elevation: notification.isRead ? 2 : 6,
+                    elevation: notification.isRead ? 2 : 4,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Container(
                       decoration: BoxDecoration(
+                        color: Colors.white,
                         borderRadius: BorderRadius.circular(12),
                         border: notification.isRead
                             ? null
                             : Border.all(
-                                color: Color(0xFF1A237E).withOpacity(0.1),
+                                color: darkBlue.withOpacity(0.2),
                                 width: 1,
                               ),
                       ),
@@ -258,9 +258,11 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                 notification.title,
                                 style: TextStyle(
                                   fontWeight: notification.isRead 
-                                      ? FontWeight.normal 
-                                      : FontWeight.bold,
+                                      ? FontWeight.w700 
+                                      : FontWeight.w900, 
                                   fontSize: 16,
+                                  color: Colors.black87,
+                                  letterSpacing: 0.3,
                                 ),
                               ),
                             ),
@@ -282,16 +284,18 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                             Text(
                               notification.message,
                               style: TextStyle(
-                                color: Colors.grey[600],
+                                color: Colors.grey[700],
                                 fontSize: 14,
+                                fontWeight: FontWeight.w600, 
                               ),
                             ),
                             const SizedBox(height: 8),
                             Text(
                               DateFormat('MMM dd, yyyy • hh:mm a').format(notification.timestamp),
                               style: TextStyle(
-                                color: Colors.grey[500],
+                                color: Colors.grey[600],
                                 fontSize: 12,
+                                fontWeight: FontWeight.w600,
                               ),
                             ),
                           ],
@@ -312,7 +316,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                   children: [
                                     Icon(Icons.mark_email_read, size: 18),
                                     SizedBox(width: 8),
-                                    Text('Mark as Read'),
+                                    Text('Mark as Read', style: TextStyle(fontWeight: FontWeight.bold)),
                                   ],
                                 ),
                               ),
@@ -322,7 +326,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                 children: [
                                   Icon(Icons.delete, size: 18, color: Colors.red),
                                   SizedBox(width: 8),
-                                  Text('Delete', style: TextStyle(color: Colors.red)),
+                                  Text('Delete', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
                                 ],
                               ),
                             ),
@@ -334,7 +338,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                           }
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
-                              content: Text('Tapped: ${notification.title}'),
+                              content: Text('Tapped: ${notification.title}', style: const TextStyle(fontWeight: FontWeight.bold)),
                               duration: const Duration(seconds: 1),
                             ),
                           );
@@ -348,6 +352,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     );
   }
 }
+
 enum NotificationType {
   transaction,
   security,

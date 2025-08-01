@@ -115,6 +115,7 @@ class _DepositDialogState extends State<DepositDialog> {
   @override
   Widget build(BuildContext context) {
     return Dialog(
+      backgroundColor: Colors.white,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
       ),
@@ -131,7 +132,7 @@ class _DepositDialogState extends State<DepositDialog> {
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: Theme.of(context).primaryColor.withOpacity(0.1),
+                      color: Colors.white,
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Icon(
@@ -408,6 +409,7 @@ class _StkPushDialogState extends State<StkPushDialog>
       barrierDismissible: false,
       builder: (BuildContext context) {
         return Dialog(
+          backgroundColor: Colors.white,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),
@@ -475,6 +477,7 @@ class _StkPushDialogState extends State<StkPushDialog>
   @override
   Widget build(BuildContext context) {
     return Dialog(
+      backgroundColor: Colors.white,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
       ),
@@ -491,7 +494,7 @@ class _StkPushDialogState extends State<StkPushDialog>
                   child: Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: Colors.green.shade100,
+                      color: Colors.white,
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
@@ -516,7 +519,7 @@ class _StkPushDialogState extends State<StkPushDialog>
               'Check your phone for M-Pesa prompt',
               textAlign: TextAlign.center,
               style: TextStyle(
-                color: Colors.grey.shade600,
+                color: Colors.white,
                 fontSize: 14,
               ),
             ),
@@ -524,7 +527,7 @@ class _StkPushDialogState extends State<StkPushDialog>
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.grey.shade100,
+                color: Colors.white,
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Column(

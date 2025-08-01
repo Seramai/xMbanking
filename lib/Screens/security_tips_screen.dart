@@ -12,6 +12,8 @@ class SecurityTipsScreen extends StatelessWidget {
         foregroundColor: Colors.white,
       ),
       body: Container(
+        width: double.infinity,
+        height: double.infinity,
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
@@ -26,47 +28,38 @@ class SecurityTipsScreen extends StatelessWidget {
           padding: const EdgeInsets.all(20),
           child: Column(
             children: [
-              _buildSecurityTipCard(
-                icon: Icons.lock,
-                title: "Password Protection",
-                tips: [
-                  "Use strong, unique passwords for your account",
-                  "Never share your PIN or passwords with anyone",
-                  "Change passwords every 3 months",
-                  "Avoid using personal information in passwords"
-                ],
+              Card(
+                elevation: 4,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Text(
+                    "We use the latest in online security technology to make sure that you are protected when performing online banking. In addition, here are a few tips to help you stay safe:",
+                    style: const TextStyle(
+                      fontSize: 16,
+                      height: 1.5,
+                      color: Color(0xFF0D1B4A),
+                      fontWeight: FontWeight.bold,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
               ),
               const SizedBox(height: 20),
               _buildSecurityTipCard(
-                icon: Icons.phone_android,
-                title: "Mobile Security",
+                icon: Icons.security,
+                title: "Online Banking Security",
                 tips: [
-                  "Always lock your mobile device",
-                  "Install apps only from official stores",
-                  "Keep your operating system updated",
-                  "Enable remote wipe feature"
-                ],
-              ),
-              const SizedBox(height: 20),
-              _buildSecurityTipCard(
-                icon: Icons.wifi,
-                title: "Online Safety",
-                tips: [
-                  "Avoid using public WiFi for transactions",
-                  "Look for 'https://' in website URLs",
-                  "Log out after online banking sessions",
-                  "Beware of phishing emails pretending to be from SACCO"
-                ],
-              ),
-              const SizedBox(height: 20),
-              _buildSecurityTipCard(
-                icon: Icons.credit_card,
-                title: "Transaction Safety",
-                tips: [
-                  "Verify all transaction details before confirming",
-                  "Regularly check your account statements",
-                  "Report lost cards immediately",
-                  "Set up transaction alerts"
+                  "Never share your username or password",
+                  "Never store your passwords on your phone",
+                  "Never leave your online session unattended",
+                  "Make sure you log-off after every session",
+                  "Keep track of your login history",
+                  "Check your balances and transaction account regularly",
+                  "Report any suspicious activity on your account immediately",
+                  "Remember to update us whenever your contact information change"
                 ],
               ),
             ],
