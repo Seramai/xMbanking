@@ -1,6 +1,7 @@
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 // this loads and manages environment variables
 class ApiConfig{
+  // the .env file is loaded and read
   static Future<void> initialize() async {
     try {
       await dotenv.load(fileName: ".env");
@@ -18,7 +19,7 @@ class ApiConfig{
       throw Exception("Failed to load environment configuration: $e");
     }
   }
-  // gatting the base url from the env file
+  // this function retrieves the base url from the .env file
   static String get baseUrl{
     final url = dotenv.env['API_BASE_URL'];
     if(url == null || url.isEmpty){
@@ -50,6 +51,14 @@ class ApiConfig{
     }
     return baseUrl + endpoint;
   }
+  // getting the login url
+  static String get loginUrl{
+    final endpoint = dotenv.env['LOGIN_URL'];
+    if(endpoint == null || endpoint.isEmpty){
+      throw Exception("LOGIN URL not found in the env file");
+    }
+    return baseUrl + endpoint;
+  }
   // getting the headers that will be used in the api
   static Map<String, String> get headers{
     return {
@@ -70,18 +79,7 @@ class ApiConfig{
     print("Base URL: $baseUrl");
     print("Validate URL: $validateRegistrationUrl");
     print("Register URL: $registrationUrl");
+    print("Login URL: $loginUrl");
     print("API Key: ${apiKey.substring(0, 8)}...");
   }
-  // confirms configuration
-  static bool isConfigured() {
-  try {
-    final url = baseUrl;
-    final key = apiKey;
-    final validateUrl = validateRegistrationUrl;
-    final regUrl = registrationUrl;
-    return true;
-  } catch (e) {
-    return false;
-  }
-}
 }

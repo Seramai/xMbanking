@@ -9,13 +9,13 @@ import 'dart:typed_data';
 
 class RegistrationScreen extends StatefulWidget {
   const RegistrationScreen({super.key});
-
   @override
   _RegistrationScreenState createState() => _RegistrationScreenState();
 }
-
 class _RegistrationScreenState extends State<RegistrationScreen> {
+  // For step 1 and validation-form keys validate form fields
   final _formKey1 = GlobalKey<FormState>();
+  // for the upload final step
   final _formKey2 = GlobalKey<FormState>();
   final _fullNameController = TextEditingController();
   final _memberNumberController = TextEditingController();
@@ -31,6 +31,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   Uint8List? _selfieImageBytes;
   Uint8List? _signatureDocumentBytes;
   String? _signatureDocumentName;
+  // tracks the three step
   int _currentStep = 0;
   String? _selectedIdType;
   String? _selectedGender;
@@ -56,6 +57,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     _emailController.dispose();
     super.dispose();
   }
+  // validation
   String? _validateFullName(String? value) {
     if (value == null || value.isEmpty) {
       return 'Full name is required';
@@ -121,25 +123,34 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     }
     return null;
   }
-  // Photo capture methods
+  // Photo capture methods(enables selecting picture from gallery)-higher quality imgs
   Future<void> _captureSelfie() async {
     try {
       final XFile? image = await _picker.pickImage(
-        source: ImageSource.gallery,
+        // Use camera for mobile, gallery for web
+        source: kIsWeb ? ImageSource.gallery : ImageSource.camera,
         imageQuality: 85,
         maxWidth: 800,
         maxHeight: 800,
       );
 
       if (image != null) {
-        final bytes = await image.readAsBytes();
-        setState(() {
-          _selfieImageBytes = bytes;
-          _selfieImage = null;
-        });
+        if (kIsWeb) {
+          final bytes = await image.readAsBytes();
+          setState(() {
+            _selfieImageBytes = bytes;
+            _selfieImage = null;
+          });
+        } else {
+          setState(() {
+            _selfieImage = File(image.path);
+            _selfieImageBytes = null;
+          });
+        }
+        
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Profile photo captured successfully'),
+          SnackBar(
+            content: Text(kIsWeb ? 'Profile photo selected successfully' : 'Profile photo captured successfully'),
             backgroundColor: Colors.green,
           ),
         );
@@ -147,13 +158,12 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Failed to capture photo: $e'),
+          content: Text(kIsWeb ? 'Failed to select photo: $e' : 'Failed to capture photo: $e'),
           backgroundColor: Colors.red,
         ),
       );
     }
   }
-
   Future<void> _takeCameraPhoto() async {
     try {
       final XFile? image = await _picker.pickImage(
@@ -173,6 +183,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
 
       if (image != null) {
         setState(() {
+          // store the file in mobile
           _selfieImage = File(image.path);
           _selfieImageBytes = null;
         });
@@ -344,7 +355,6 @@ Future<void> _pickSignature() async {
       );
       return;
     }
-
     if (!_hasSignature()) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -536,7 +546,6 @@ Future<void> _pickSignature() async {
             ),
           ),
           const SizedBox(height: 16),
-
           TextFormField(
             controller: _emailController,
             validator: _validateEmail,
@@ -548,7 +557,6 @@ Future<void> _pickSignature() async {
             ),
           ),
           const SizedBox(height: 32),
-
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
@@ -805,7 +813,7 @@ Future<void> _pickSignature() async {
                     : (kIsWeb ? Icons.photo_library : Icons.camera_alt)),
                   label: Text(_hasSelfie() 
                     ? 'Change Photo' 
-                    : (kIsWeb ? 'Select Photo' : 'Take Photo')),
+                    : (kIsWeb ? 'Select Photo' : 'Take Selfie')),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: _hasSelfie() 
                       ? Colors.green 
@@ -961,7 +969,6 @@ Future<void> _pickSignature() async {
         backgroundColor: Theme.of(context).primaryColor,
         foregroundColor: Colors.white,
       ),
-      
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -1006,7 +1013,6 @@ Future<void> _pickSignature() async {
                 ],
               ),
             ),
-            
             Text(
               'Step ${_currentStep + 1} of 3',
               style: TextStyle(
@@ -1014,7 +1020,6 @@ Future<void> _pickSignature() async {
                 fontSize: 14,
               ),
             ),
-            
             const SizedBox(height: 24),
             _currentStep == 0 ? _buildStep1():
             _currentStep == 1 ? _buildValidationStep() : _buildStep2(),

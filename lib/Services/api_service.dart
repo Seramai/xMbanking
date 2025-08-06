@@ -1,7 +1,9 @@
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
+// http functionality
 import 'package:http/http.dart' as http;
+// Handles files
 import 'package:http_parser/http_parser.dart';
 import '../Config/api_config.dart';
 
@@ -16,6 +18,7 @@ class ApiService {
     required String emailAddress,
   }) async {
     try {
+      // converting normal id to api code
       String idTypeCode = _convertIdTypeToCode(identificationType);
       final requestBody = {
         "FullName": fullName,
@@ -99,7 +102,7 @@ class ApiService {
     try {
       print("Starting registration for: $emailAddress");
       
-      // Convert images to base64
+      // Convert images to base64(first checks if the image bytes and image file is provided and then converts and then adds the prefix data:image/jpeg;base64 )
       String? selfieBase64;
       String? signatureBase64;
       if (profileImageBytes != null && profileImageBytes.isNotEmpty) {
@@ -181,6 +184,80 @@ class ApiService {
       return {
         'success': false,
         'message': 'Registration failed: ${e.toString()}',
+      };
+    }
+  }
+  // login user
+  static Future<Map<String, dynamic>> loginUser({
+    required String mobileNumber,
+    required String password,
+  }) async {
+    try {
+      final requestBody = {
+        "MobileNumber": mobileNumber,
+        "Password": password,
+      };
+      
+      print("Attempting login for: $mobileNumber");
+      print("Request body: ${jsonEncode(requestBody)}");
+      
+      final response = await http.post(
+        Uri.parse(ApiConfig.loginUrl),
+        headers: ApiConfig.headers,
+        body: jsonEncode(requestBody),
+      ).timeout(
+        const Duration(seconds: 30),
+        onTimeout: () {
+          throw Exception('Login timeout - please check your internet connection');
+        },
+      );
+      
+      print("Login response status: ${response.statusCode}");
+      print("Login response body: ${response.body}");
+      
+      if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body);
+        return {
+          'success': true,
+          'message': 'Login successful',
+          'data': responseData,
+        };
+      } else if (response.statusCode == 401) {
+        final errorData = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': errorData['message'] ?? 'Invalid mobile number or password',
+          'errors': errorData,
+        };
+      } else if (response.statusCode == 400) {
+        final errorData = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': errorData['title'] ?? 'Login failed',
+          'errors': errorData,
+        };
+      } else {
+        return {
+          'success': false,
+          'message': 'Login failed: ${response.statusCode}',
+        };
+      }
+    } on SocketException {
+      return {
+        'success': false,
+        'message': 'No internet connection - please check your network',
+      };
+    } catch (e) {
+      print("Login error: $e");
+      if (e.toString().contains('timeout')) {
+        return {
+          'success': false,
+          'message': 'Login timeout - please check your internet connection',
+        };
+      }
+      return {
+        'success': false,
+        'message': 'Login failed: ${e.toString()}',
       };
     }
   }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:local_auth/local_auth.dart';
+import '../Services/api_service.dart';
 import 'menu_drawer_screen.dart';
 import 'dart:io';
 import 'dart:typed_data';
@@ -21,8 +22,8 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _usernameController = TextEditingController();
-  final _pinController = TextEditingController();
+  final _mobileNumberController = TextEditingController();
+  final _passwordController = TextEditingController();
   bool _isPinVisible = false;
   bool _isLoading = false;
   bool _isBiometricAvailable = false;
@@ -37,8 +38,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   void dispose() {
-    _usernameController.dispose();
-    _pinController.dispose();
+    _mobileNumberController.dispose();
+    _passwordController.dispose();
     super.dispose();
   }
 
@@ -57,25 +58,25 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  String? _validateUsername(String? value) {
+  String? _validateMobileNumber(String? value) {
     if (value == null || value.isEmpty) {
-      return 'Username is required';
+      return 'Mobile number is required';
     }
-    if (value.length < 3) {
-      return 'Username must be at least 3 characters';
+    if (value.length < 10) {
+      return 'Mobile number must be at least 10 digits';
+    }
+    if (!RegExp(r'^[0-9+]+$').hasMatch(value)) {
+      return 'Please enter a valid mobile number';
     }
     return null;
   }
 
-  String? _validatePin(String? value) {
+  String? _validatePassword(String? value) {
     if (value == null || value.isEmpty) {
-      return 'PIN is required';
+      return 'Password is required';
     }
-    if (value.length < 4 || value.length > 6) {
-      return 'PIN must be between 4-6 digits';
-    }
-    if (!RegExp(r'^[0-9]+$').hasMatch(value)) {
-      return 'PIN must contain only numbers';
+    if (value.length < 4) {
+      return 'Password must be at least 4 characters';
     }
     return null;
   }
@@ -90,18 +91,31 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
-      await Future.delayed(const Duration(seconds: 2));
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Login successful! Welcome back.'),
-          backgroundColor: Colors.green,
-        ),
+      final result = await ApiService.loginUser(
+        mobileNumber: _mobileNumberController.text.trim(),
+        password: _passwordController.text.trim(),
       );
-      _showSuccessDialog();
+
+      if (result['success'] == true) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result['message'] ?? 'Login successful!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        _showSuccessDialog();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result['message'] ?? 'Login failed'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Login failed: $e'),
+          content: Text('Login error: $e'),
           backgroundColor: Colors.red,
         ),
       );
@@ -178,7 +192,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   '/dashboard',
                   (route) => false,
                   arguments: {
-                    'username': _usernameController.text,
+                    'mobileNumber': _mobileNumberController.text,
                     'email': 'winniejomo17@gmail.com',
                     'profileImageBytes': widget.profileImageBytes,
                     'profileImageFile': widget.profileImageFile,
@@ -311,12 +325,13 @@ Widget build(BuildContext context) {
                           child: Column(
                             children: [
                               TextFormField(
-                                controller: _usernameController,
-                                validator: _validateUsername,
+                                controller: _mobileNumberController,
+                                validator: _validateMobileNumber,
+                                keyboardType: TextInputType.phone,
                                 decoration: InputDecoration(
-                                  labelText: 'Username',
+                                  labelText: 'Mobile Number',
                                   border: const OutlineInputBorder(),
-                                  prefixIcon: const Icon(Icons.person),
+                                  prefixIcon: const Icon(Icons.phone),
                                   enabledBorder: OutlineInputBorder(
                                     borderSide: BorderSide(color: Colors.grey.shade400),
                                   ),
@@ -328,38 +343,33 @@ Widget build(BuildContext context) {
                               
                               const SizedBox(height: 16),
                               TextFormField(
-                                controller: _pinController,
-                                validator: _validatePin,
-                                obscureText: !_isPinVisible,
-                                keyboardType: TextInputType.number,
-                                inputFormatters: [
-                                  FilteringTextInputFormatter.digitsOnly,
-                                  LengthLimitingTextInputFormatter(6),
-                                ],
-                                decoration: InputDecoration(
-                                  labelText: 'PIN',
-                                  border: const OutlineInputBorder(),
-                                  prefixIcon: const Icon(Icons.lock),
-                                  enabledBorder: OutlineInputBorder(
-                                    borderSide: BorderSide(color: Colors.grey.shade400),
-                                  ),
-                                  focusedBorder: OutlineInputBorder(
-                                    borderSide: BorderSide(color: Theme.of(context).primaryColor),
-                                  ),
-                                  suffixIcon: IconButton(
-                                    icon: Icon(
-                                      _isPinVisible 
-                                        ? Icons.visibility_off 
-                                        : Icons.visibility,
+                                  controller: _passwordController,
+                                  validator: _validatePassword,
+                                  obscureText: !_isPinVisible,
+                                  decoration: InputDecoration(
+                                    labelText: 'Password',
+                                    border: const OutlineInputBorder(),
+                                    prefixIcon: const Icon(Icons.lock),
+                                    enabledBorder: OutlineInputBorder(
+                                      borderSide: BorderSide(color: Colors.grey.shade400),
                                     ),
-                                    onPressed: () {
-                                      setState(() {
-                                        _isPinVisible = !_isPinVisible;
-                                      });
-                                    },
+                                    focusedBorder: OutlineInputBorder(
+                                      borderSide: BorderSide(color: Theme.of(context).primaryColor),
+                                    ),
+                                    suffixIcon: IconButton(
+                                      icon: Icon(
+                                        _isPinVisible 
+                                          ? Icons.visibility_off 
+                                          : Icons.visibility,
+                                      ),
+                                      onPressed: () {
+                                        setState(() {
+                                          _isPinVisible = !_isPinVisible;
+                                        });
+                                      },
+                                    ),
                                   ),
                                 ),
-                              ),
                               
                               const SizedBox(height: 16),
                               Row(
@@ -382,7 +392,7 @@ Widget build(BuildContext context) {
                                   GestureDetector(
                                     onTap: _handleForgotPin,
                                     child: Text(
-                                      'Forgot PIN?',
+                                      'Forgot Password?',
                                       style: TextStyle(
                                         color: Theme.of(context).primaryColor,
                                         fontSize: 14,
