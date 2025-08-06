@@ -6,11 +6,19 @@ import 'Screens/otp_verification_screen.dart';
 import 'Screens/dashboard_screen.dart';
 import 'Screens/user_profile_screen.dart';
 import 'Screens/notifications_screen.dart';
-import 'dart:io';
-import 'dart:typed_data';
+import 'Config/api_config.dart';
 
-void main() {
-  runApp(const MyApp());
+
+void main() async{
+  // initializing flutter
+  WidgetsFlutterBinding.ensureInitialized();
+  try{
+    await ApiConfig.initialize();
+    print(" App initialized successfully");
+  } catch(e){
+    print("failed to initialize app $e");
+  }
+   runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {

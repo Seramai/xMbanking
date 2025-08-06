@@ -31,6 +31,16 @@
 
   <title>mobile_system</title>
   <link rel="manifest" href="manifest.json">
+    <script>
+    // This helps the .env file load properly in web
+    var flutterEnvLoader = {
+      load: function() {
+        return new Promise(function(resolve) {
+          resolve();
+        });
+      }
+    };
+  </script>
 </head>
 <body>
   <script src="flutter_bootstrap.js" async></script>

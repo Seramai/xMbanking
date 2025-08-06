@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart'; 
 import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
+import '../Services/api_service.dart';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -32,6 +33,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   String? _signatureDocumentName;
   int _currentStep = 0;
   String? _selectedIdType;
+  String? _selectedGender;
   bool _acceptedTerms = false;
   bool _isLoading = false;
   
@@ -43,6 +45,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     'Driver\'s License No',
     'Birth Certificate No',
   ];
+  final List<String> _genders =['M', 'F'];
 
   @override
   void dispose() {
@@ -90,6 +93,13 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     }
     return null;
   }
+  String? _validateGender(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Please select Gender';
+    }
+    return null;
+  }
+
 
   String? _validateIdNumber(String? value) {
     if (value == null || value.isEmpty) {
@@ -113,36 +123,33 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   }
   // Photo capture methods
   Future<void> _captureSelfie() async {
-    if (kIsWeb) {
-      await _pickImageFromGallery();
-    } else {
-      showModalBottomSheet(
-        context: context,
-        builder: (BuildContext context) {
-          return SafeArea(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                ListTile(
-                  leading: const Icon(Icons.camera_alt),
-                  title: const Text('Take Photo'),
-                  onTap: () {
-                    Navigator.pop(context);
-                    _takeCameraPhoto();
-                  },
-                ),
-                ListTile(
-                  leading: const Icon(Icons.photo_library),
-                  title: const Text('Choose from Gallery'),
-                  onTap: () {
-                    Navigator.pop(context);
-                    _pickImageFromGallery();
-                  },
-                ),
-              ],
-            ),
-          );
-        },
+    try {
+      final XFile? image = await _picker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 85,
+        maxWidth: 800,
+        maxHeight: 800,
+      );
+
+      if (image != null) {
+        final bytes = await image.readAsBytes();
+        setState(() {
+          _selfieImageBytes = bytes;
+          _selfieImage = null;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Profile photo captured successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to capture photo: $e'),
+          backgroundColor: Colors.red,
+        ),
       );
     }
   }
@@ -221,45 +228,38 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       );
     }
   }
-  // Signature upload
-  Future<void> _pickSignature() async {
-    try {
-      FilePickerResult? result = await FilePicker.platform.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png'],
-        allowMultiple: false,
-        withData: kIsWeb,
-      );
+Future<void> _pickSignature() async {
+  try {
+    final XFile? image = await _picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 85,
+      maxWidth: 800,
+      maxHeight: 800,
+    );
 
-      if (result != null) {
-        setState(() {
-          if (kIsWeb) {
-            _signatureDocumentBytes = result.files.single.bytes;
-            _signatureDocumentName = result.files.single.name;
-            _signatureDocument = null;
-          } else {
-            _signatureDocument = File(result.files.single.path!);
-            _signatureDocumentBytes = null;
-            _signatureDocumentName = result.files.single.name;
-          }
-        });
-        
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Signature uploaded: ${result.files.single.name}'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      }
-    } catch (e) {
+    if (image != null) {
+      final bytes = await image.readAsBytes();
+      setState(() {
+        _signatureDocumentBytes = bytes;
+        _signatureDocument = null; 
+        _signatureDocumentName = 'signature.jpg';
+      });
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error picking signature: $e'),
-          backgroundColor: Colors.red,
+        const SnackBar(
+          content: Text('Signature image selected successfully'),
+          backgroundColor: Colors.green,
         ),
       );
     }
+  } catch (e) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Failed to select signature: $e'),
+        backgroundColor: Colors.red,
+      ),
+    );
   }
+}
   bool _hasSelfie() {
     return (_selfieImage != null || _selfieImageBytes != null);
   }
@@ -267,12 +267,57 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   bool _hasSignature() {
     return (_signatureDocument != null || _signatureDocumentBytes != null);
   }
-  void _nextStep() {
+  void _nextStep() async {
     if (_currentStep == 0) {
       if (_formKey1.currentState!.validate()) {
         setState(() {
           _currentStep = 1;
         });
+      }
+    } else if (_currentStep == 1) {
+      // Second step here validate details with API
+      if (_formKey1.currentState!.validate()) {
+        setState(() {
+          _isLoading = true;
+        });
+        
+        try {
+          final result = await ApiService.validateRegistration(
+            fullName: _fullNameController.text,
+            clientId: _memberNumberController.text,
+            mobileNumber: _mobileController.text,
+            identificationType: _selectedIdType!,
+            identificationNumber: _identificationNumberController.text,
+            emailAddress: _emailController.text,
+          );
+          
+          setState(() {
+            _isLoading = false;
+          });
+          
+          if (result['success']) {
+            setState(() {
+              _currentStep = 2;
+            });
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(result['message']),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        } catch (e) {
+          setState(() {
+            _isLoading = false;
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Validation failed: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
       }
     }
   }
@@ -325,32 +370,54 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     });
 
     try {
-      // Simulate registration API call
-      await Future.delayed(const Duration(seconds: 2));
-      
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('OTP sent to ${_emailController.text}'),
-          backgroundColor: Colors.green,
-        ),
+      final result = await ApiService.registerUser(
+        fullName: _fullNameController.text,
+        clientId: _memberNumberController.text,
+        mobileNumber: _mobileController.text,
+        identificationType: _selectedIdType!,
+        identificationNumber: _identificationNumberController.text,
+        emailAddress: _emailController.text,
+        profileImageFile: _selfieImage,
+        profileImageBytes: _selfieImageBytes,
+        signatureFile: _signatureDocument,
+        signatureBytes: _signatureDocumentBytes,
+        signatureFileName: _signatureDocumentName,
+        gender: _selectedGender!,
       );
-      Navigator.pushNamed(
-        context, 
-        '/otp-verification',
-        arguments: {
-          'email': _emailController.text,
-          'mobileNumber': _mobileController.text,
-          'fullName': _fullNameController.text,
-          'memberNumber': _memberNumberController.text,
-          'idType': _selectedIdType,
-          'idNumber': _identificationNumberController.text,
-          'profileImageBytes': _selfieImageBytes,
-          'profileImageFile': _selfieImage,
-          'signatureBytes': _signatureDocumentBytes,
-          'signatureFile': _signatureDocument,
-        },
-      );
+
+      if (result['success']) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('OTP sent to ${_emailController.text}'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        Navigator.pushNamed(
+          context, 
+          '/otp-verification',
+          arguments: {
+            'email': _emailController.text,
+            'mobileNumber': _mobileController.text,
+            'fullName': _fullNameController.text,
+            'memberNumber': _memberNumberController.text,
+            'idType': _selectedIdType,
+            'idNumber': _identificationNumberController.text,
+            'profileImageBytes': _selfieImageBytes,
+            'profileImageFile': _selfieImage,
+            'signatureBytes': _signatureDocumentBytes,
+            'signatureFile': _signatureDocument,
+          },
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result['message'] ?? 'Registration failed'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     } catch (e) {
+      // Handle network/connection errors
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Registration failed: $e'),
@@ -378,6 +445,159 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
           ),
           const SizedBox(height: 24),
 
+          TextFormField(
+            controller: _fullNameController,
+            validator: _validateFullName,
+            decoration: const InputDecoration(
+              labelText: 'Full Name',
+              border: OutlineInputBorder(),
+              prefixIcon: Icon(Icons.person),
+            ),
+          ),
+          const SizedBox(height: 16),
+          DropdownButtonFormField<String>(
+            value: _selectedGender,
+            validator: _validateGender,
+            decoration: const InputDecoration(
+              labelText: 'Gender',
+              border: OutlineInputBorder(),
+              prefixIcon: Icon(Icons.person_outline),
+            ),
+            items: _genders.map((String gender){
+              return DropdownMenuItem<String>(
+                value: gender,
+                child: Text(gender == 'M' ? 'Male': 'Female'),
+              );
+            }).toList(),
+            onChanged: (String? newValue){
+              setState((){
+                _selectedGender = newValue;
+              });
+            },
+          ),
+          const SizedBox(height: 16),
+
+          TextFormField(
+            controller: _memberNumberController,
+            validator: _validateMemberNumber,
+            decoration: const InputDecoration(
+              labelText: 'Member Number',
+              border: OutlineInputBorder(),
+              prefixIcon: Icon(Icons.badge),
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          TextFormField(
+            controller: _mobileController,
+            validator: _validateMobileNumber,
+            keyboardType: TextInputType.phone,
+            inputFormatters: [
+              FilteringTextInputFormatter.digitsOnly,
+              LengthLimitingTextInputFormatter(15),
+            ],
+            decoration: const InputDecoration(
+              labelText: 'Mobile Number',
+              border: OutlineInputBorder(),
+              prefixIcon: Icon(Icons.phone),
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          DropdownButtonFormField<String>(
+            value: _selectedIdType,
+            validator: _validateIdType,
+            decoration: const InputDecoration(
+              labelText: 'Identification Type',
+              border: OutlineInputBorder(),
+              prefixIcon: Icon(Icons.credit_card),
+            ),
+            items: _idTypes.map((String type) {
+              return DropdownMenuItem<String>(
+                value: type,
+                child: Text(type),
+              );
+            }).toList(),
+            onChanged: (String? newValue) {
+              setState(() {
+                _selectedIdType = newValue;
+              });
+            },
+          ),
+          const SizedBox(height: 16),
+
+          TextFormField(
+            controller: _identificationNumberController,
+            validator: _validateIdNumber,
+            decoration: const InputDecoration(
+              labelText: 'Identification Number',
+              border: OutlineInputBorder(),
+              prefixIcon: Icon(Icons.numbers),
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          TextFormField(
+            controller: _emailController,
+            validator: _validateEmail,
+            keyboardType: TextInputType.emailAddress,
+            decoration: const InputDecoration(
+              labelText: 'Email Address',
+              border: OutlineInputBorder(),
+              prefixIcon: Icon(Icons.email),
+            ),
+          ),
+          const SizedBox(height: 32),
+
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: _isLoading ? null : _nextStep,  
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Theme.of(context).primaryColor,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+              ),
+              child: _isLoading                         
+                  ? const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          ),
+                        ),
+                        SizedBox(width: 12),
+                        Text('Validating...'),
+                      ],
+                    )
+                  : const Text(
+                      'Next Step',
+                      style: TextStyle(fontSize: 16),
+                    ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+    // validation widget(confirm your details)
+  Widget _buildValidationStep() {
+    return Form(
+      key: _formKey1, 
+      child: Column(
+        children: [
+          const Text(
+            'Confirm Your Details',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 24),
           TextFormField(
             controller: _fullNameController,
             validator: _validateFullName,
@@ -460,21 +680,34 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
             ),
           ),
           const SizedBox(height: 32),
-
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: _nextStep,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Theme.of(context).primaryColor,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 16),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: _previousStep,
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16)
+                  ),
+                  child: const Text('Edit Details'),
+                ),
               ),
-              child: const Text(
-                'Next Step',
-                style: TextStyle(fontSize: 16),
+              const SizedBox(width: 16),
+              Expanded(
+                flex: 2,
+                child: ElevatedButton(
+                  onPressed: _nextStep,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Theme.of(context).primaryColor,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16)
+                  ),
+                  child: const Text(
+                    'Confirm and Continue',
+                    style: TextStyle(fontSize: 16)
+                  ),
+                ),
               ),
-            ),
+            ],
           ),
         ],
       ),
@@ -494,8 +727,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
             ),
           ),
           const SizedBox(height: 24),
-
-          // Photo Section
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(16),
@@ -725,7 +956,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(_currentStep == 0 ? 'Personal Details' : 'Photo & Signature'),
+        title: Text(_currentStep == 0 ? 'Personal Details' : 
+        _currentStep == 1 ? 'Confirm Details' : 'Photo & Signature'),
         backgroundColor: Theme.of(context).primaryColor,
         foregroundColor: Colors.white,
       ),
@@ -734,7 +966,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            // Progress indicator
             Container(
               padding: const EdgeInsets.symmetric(vertical: 16),
               child: Row(
@@ -760,12 +991,24 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                       ),
                     ),
                   ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Container(
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: _currentStep >= 2
+                        ? Theme.of(context).primaryColor
+                        : Colors.grey.shade300,
+                        borderRadius: BorderRadius.circular(2)
+                      ),
+                    )
+                  )
                 ],
               ),
             ),
             
             Text(
-              'Step ${_currentStep + 1} of 2',
+              'Step ${_currentStep + 1} of 3',
               style: TextStyle(
                 color: Colors.grey.shade600,
                 fontSize: 14,
@@ -773,7 +1016,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
             ),
             
             const SizedBox(height: 24),
-            _currentStep == 0 ? _buildStep1() : _buildStep2(),
+            _currentStep == 0 ? _buildStep1():
+            _currentStep == 1 ? _buildValidationStep() : _buildStep2(),
             const SizedBox(height: 32),
             if (_currentStep == 0) ...[
               Row(
