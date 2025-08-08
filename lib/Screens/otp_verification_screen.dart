@@ -121,7 +121,8 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
           '/dashboard', 
           (route) => false,
           arguments: {
-            'loginData': widget.loginData,
+            // result is the full otp verification response
+            'loginData': result,
             'mobileNumber': widget.mobileNumber,
             'email': widget.email,
             'profileImageBytes': widget.profileImageBytes,

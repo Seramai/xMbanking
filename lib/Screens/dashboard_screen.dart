@@ -29,6 +29,7 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   bool _isBalanceVisible = true;
   double _accountBalance = 0.0;
+  String? _apiUsername;
   final int _numberOfAccounts = 2;
   final int _notificationCount = 3;
   // they are varibales that will store the api responses
@@ -45,6 +46,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
       if (args != null && args['loginData'] != null) {
+        print("Received loginData in dashboard:");
+        print("LoginData keys: ${args['loginData'].keys}");
+        print("LoginData structure: ${args['loginData']}");
         setState(() {
           _loginData = args['loginData'];
           _loadApiData();
@@ -56,17 +60,39 @@ class _DashboardScreenState extends State<DashboardScreen> {
   void _loadApiData() {
     if (_loginData == null) return;
     
+    // getting the actual data-because the otp response puts the actual data in a data key so the need to extract it
+    Map<String, dynamic> actualData;
+    
+    // Check if loginData has the 'data' from OTP 
+    if (_loginData!['data'] != null) {
+      actualData = _loginData!['data'] as Map<String, dynamic>;
+      print("Using nested data structure");
+      print("Actual data keys: ${actualData.keys}");
+    } else {
+      actualData = _loginData!;
+      print("Using direct data structure");
+    }
     // Updating balance from API
-    final balance = _loginData!['balance'];
+    final balance = actualData['balance'];
     if (balance != null && balance['Balance'] != null) {
       _accountBalance = balance['Balance'].toDouble();
+      print("Updated balance: $_accountBalance");
     }
     
     // Updating transactions from API
-    final statements = _loginData!['statement'] as List<dynamic>?;
+    final statements = actualData['statement'] as List<dynamic>?;
     if (statements != null) {
       _apiTransactions = statements;
       _updateMiniStatement();
+      print("Updated transactions: ${statements.length} items");
+    }
+    
+    // Extract user name from the response
+    if (actualData['Name'] != null) {
+      setState(() {
+        _apiUsername = actualData['Name'];
+        print("Updated username: $_apiUsername");
+      });
     }
   }
 
@@ -108,17 +134,26 @@ class _DashboardScreenState extends State<DashboardScreen> {
     _miniStatement = apiTransactions.take(5).toList();
   }
   String get _lastLoginTime {
-    if (_loginData != null && _loginData!['LoginInfo'] != null) {
-      final loginInfo = _loginData!['LoginInfo'];
-      final lastDate = loginInfo['LastLoginDate'];
-      final lastTime = loginInfo['LastLoginTime'];
+    if (_loginData != null) {
+      Map<String, dynamic>? actualData;
+      if (_loginData!['data'] != null) {
+        actualData = _loginData!['data'] as Map<String, dynamic>;
+      } else {
+        actualData = _loginData!;
+      }
       
-      if (lastDate != null && lastTime != null) {
-        try {
-          final dateTime = DateTime.parse('$lastDate $lastTime');
-          return DateFormat('dd MMMM yyyy, HH:mm').format(dateTime);
-        } catch (e) {
-          print('Date parsing error: $e');
+      if (actualData['LoginInfo'] != null) {
+        final loginInfo = actualData['LoginInfo'];
+        final lastDate = loginInfo['LastLoginDate'];
+        final lastTime = loginInfo['LastLoginTime'];
+        
+        if (lastDate != null && lastTime != null) {
+          try {
+            final dateTime = DateTime.parse('$lastDate $lastTime');
+            return DateFormat('dd MMMM yyyy, HH:mm').format(dateTime);
+          } catch (e) {
+            print('Date parsing error: $e');
+          }
         }
       }
     }
@@ -139,7 +174,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       context,
       MaterialPageRoute(
         builder: (context) => UserProfileScreen(
-          username: widget.username,
+          username: _apiUsername ?? widget.username,
           email: widget.email,
           profileImageBytes: widget.profileImageBytes,
           profileImageFile: widget.profileImageFile,
@@ -225,14 +260,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 type: TransactionType.debit,
                 icon: Icons.phone_android,
               ));
-              
-              // Keep only the last 5 transactions for the mini statement
               if (_miniStatement.length > 5) {
                 _miniStatement.removeRange(5, _miniStatement.length);
               }
             });
-            
-            // Show success snackbar
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Row(
@@ -302,11 +333,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
               child: Column(
                 children: [
-                  // Top Row with Profile and Notification Icons
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      // Profile Icon
                       GestureDetector(
                         onTap: _navigateToProfile,
                         child: Container(
@@ -325,7 +354,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         ),
                       ),
                       Text(
-                        'Welcome, ${widget.username}',
+                        'Welcome, ${_apiUsername ?? widget.username}',
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 18,
