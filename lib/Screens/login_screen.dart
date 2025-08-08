@@ -182,19 +182,32 @@ class _LoginScreenState extends State<LoginScreen> {
               Text('Login Successful'),
             ],
           ),
-          content: const Text('You have successfully logged in to your account.'),
+          content: const Text('Please verify the OTP sent to your mobile number.'),
           actions: [
             ElevatedButton(
               onPressed: () {
+                // Check if userId exists in login response
+                String? userId = loginData?['UserId'] ?? loginData?['userId'];
+                if (userId == null) {
+                  Navigator.of(context).pop();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Login error: User ID not found. Please try again.'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                  return;
+                }
+                
                 Navigator.of(context).pop();
-                Navigator.pushNamedAndRemoveUntil(
+                Navigator.pushNamed(
                   context,
-                  '/dashboard',
-                  (route) => false,
+                  '/otp-verification',
                   arguments: {
-                    'loginData': loginData,
                     'mobileNumber': _mobileNumberController.text,
                     'email': loginData?['Email'] ?? loginData?['EmailAddress'] ?? '',
+                    'userId': userId,
+                    'loginData': loginData,
                     'profileImageBytes': widget.profileImageBytes,
                     'profileImageFile': widget.profileImageFile,
                   },
@@ -204,7 +217,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 backgroundColor: Theme.of(context).primaryColor,
                 foregroundColor: Colors.white,
               ),
-              child: const Text('Continue'),
+              child: const Text('Verify OTP'),
             ),
           ],
         );

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../Services/api_service.dart';
 import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
@@ -7,17 +8,19 @@ import 'dart:typed_data';
 class OTPVerificationScreen extends StatefulWidget {
   final String email;
   final String mobileNumber;
-  final String? fullName;
   final Uint8List? profileImageBytes;
   final File? profileImageFile;
+  final Map<String, dynamic>? loginData;
+  final String userId;
   
   const OTPVerificationScreen({
     super.key,
     required this.email,
     required this.mobileNumber,
-    this.fullName,
     this.profileImageBytes,
     this.profileImageFile,
+    this.loginData, 
+    required this.userId,
   });
   
   @override
@@ -98,34 +101,37 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
     });
 
     try {
-      // Simulate API call
-      await Future.delayed(const Duration(seconds: 2));
-      
       String otpCode = _getOTPCode();
-      // otp verification 
-      if (otpCode == "123456") {
+      
+      // Calling the OTP verification API
+      final result = await ApiService.verifyOTP(
+        userId: widget.userId,
+        otpCode: otpCode,
+      );
+      
+      if (result['success'] == true) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Account verified successfully!'),
+            content: Text('OTP verified successfully!'),
             backgroundColor: Colors.green,
           ),
         );
         Navigator.pushNamedAndRemoveUntil(
           context, 
-          '/login', 
+          '/dashboard', 
           (route) => false,
           arguments: {
-            'email': widget.email,
+            'loginData': widget.loginData,
             'mobileNumber': widget.mobileNumber,
-            'fullName': widget.fullName,
+            'email': widget.email,
             'profileImageBytes': widget.profileImageBytes,
             'profileImageFile': widget.profileImageFile,
           },
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Invalid OTP. Please try again.'),
+          SnackBar(
+            content: Text(result['message'] ?? 'Invalid OTP. Please try again.'),
             backgroundColor: Colors.red,
           ),
         );
@@ -188,7 +194,7 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Verify Your Account'),
+        title: const Text('Verify Login OTP'),
         backgroundColor: Theme.of(context).primaryColor,
         foregroundColor: Colors.white,
       ),
@@ -213,7 +219,7 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
             ),
             const SizedBox(height: 16),
             Text(
-              'We sent a 6-digit code to\n${widget.email}',
+             'We sent a 6-digit code to\n${widget.mobileNumber}',
               textAlign: TextAlign.center,
               style: const TextStyle(
                 fontSize: 16,

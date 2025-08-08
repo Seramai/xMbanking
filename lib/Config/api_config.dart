@@ -59,6 +59,14 @@ class ApiConfig{
     }
     return baseUrl + endpoint;
   }
+  // retrieves the otp url
+  static String get otpUrl{
+    final endpoint = dotenv.env['OTP_URL'];
+    if(endpoint == null || endpoint.isEmpty){
+      throw Exception("OTP URL not found in the env file");
+    }
+    return baseUrl + endpoint;
+  }
   // getting the headers that will be used in the api
   static Map<String, String> get headers{
     return {

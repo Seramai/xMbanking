@@ -52,9 +52,10 @@ class MyApp extends StatelessWidget {
           return OTPVerificationScreen(
             email: args?['email'] ?? '',
             mobileNumber: args?['mobileNumber'] ?? '',
+            userId: args?['userId'] ?? '',
+            loginData: args?['loginData'],
             profileImageBytes: args?['profileImageBytes'],
             profileImageFile: args?['profileImageFile'],
-            fullName: args?['fullName'],
           );
         },
         '/dashboard': (context) {

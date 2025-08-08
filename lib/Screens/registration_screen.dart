@@ -398,24 +398,20 @@ Future<void> _pickSignature() async {
       if (result['success']) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('OTP sent to ${_emailController.text}'),
+            content: Text('Registration successful! Please login to your account.'),
             backgroundColor: Colors.green,
           ),
         );
-        Navigator.pushNamed(
+        Navigator.pushNamedAndRemoveUntil(
           context, 
-          '/otp-verification',
+          '/login',
+          (route)=> false,
           arguments: {
             'email': _emailController.text,
             'mobileNumber': _mobileController.text,
             'fullName': _fullNameController.text,
-            'memberNumber': _memberNumberController.text,
-            'idType': _selectedIdType,
-            'idNumber': _identificationNumberController.text,
             'profileImageBytes': _selfieImageBytes,
             'profileImageFile': _selfieImage,
-            'signatureBytes': _signatureDocumentBytes,
-            'signatureFile': _signatureDocument,
           },
         );
       } else {

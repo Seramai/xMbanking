@@ -270,6 +270,73 @@ class ApiService {
       };
     }
   }
+  // handles otp verification
+  static Future<Map<String, dynamic>> verifyOTP({
+    required String userId,
+    required String otpCode,
+  }) async {
+    try {
+      final requestBody = {
+        "UserId": userId,
+        "Otp": otpCode,
+      };
+      
+      print("Verifying OTP for UserId: $userId");
+      print("Request body: ${jsonEncode(requestBody)}");
+      
+      final response = await http.post(
+        Uri.parse(ApiConfig.otpUrl),
+        headers: ApiConfig.headers,
+        body: jsonEncode(requestBody),
+      ).timeout(
+        const Duration(seconds: 30),
+        onTimeout: () {
+          throw Exception('OTP verification timeout - please check your internet connection');
+        },
+      );
+      
+      print("OTP verification response status: ${response.statusCode}");
+      print("OTP verification response body: ${response.body}");
+      
+      if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body);
+        return {
+          'success': true,
+          'message': 'OTP verification successful',
+          'data': responseData,
+        };
+      } else if (response.statusCode == 400 || response.statusCode == 401) {
+        final errorData = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': errorData['message'] ?? 'Invalid OTP',
+          'errors': errorData,
+        };
+      } else {
+        return {
+          'success': false,
+          'message': 'OTP verification failed: ${response.statusCode}',
+        };
+      }
+    } on SocketException {
+      return {
+        'success': false,
+        'message': 'No internet connection - please check your network',
+      };
+    } catch (e) {
+      print("OTP verification error: $e");
+      if (e.toString().contains('timeout')) {
+        return {
+          'success': false,
+          'message': 'OTP verification timeout - please check your internet connection',
+        };
+      }
+      return {
+        'success': false,
+        'message': 'OTP verification failed: ${e.toString()}',
+      };
+    }
+  }
   // Convert ID type to API code
   static String _convertIdTypeToCode(String identificationType) {
     switch (identificationType) {
