@@ -16,8 +16,8 @@ class DashboardScreen extends StatefulWidget {
   
   const DashboardScreen({
     super.key,
-    this.username = "Winnie",
-    this.email = "winnie@example.com",
+    this.username = "",
+    this.email = "",
     this.profileImageFile,
     this.profileImageBytes,
   });
@@ -28,49 +28,101 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   bool _isBalanceVisible = true;
-  double _accountBalance = 12500.00;
+  double _accountBalance = 0.0;
   final int _numberOfAccounts = 2;
   final int _notificationCount = 3;
+  // they are varibales that will store the api responses
+  Map<String, dynamic>? _loginData;
+  List<dynamic> _apiTransactions = [];
+  List<Transaction> _miniStatement = [];
+    @override
+  void initState() {
+    super.initState();
+    _initializeData();
+  }
 
-  List<Transaction> _miniStatement = [
-    Transaction(
-      date: DateTime.now().subtract(const Duration(days: 1)),
-      description: "MPESA Deposit",
-      amount: 2500.00,
-      type: TransactionType.credit,
-      icon: Icons.phone_android,
-    ),
-    Transaction(
-      date: DateTime.now().subtract(const Duration(days: 2)),
-      description: "ATM Withdrawal",
-      amount: -1000.00,
-      type: TransactionType.debit,
-      icon: Icons.atm,
-    ),
-    Transaction(
-      date: DateTime.now().subtract(const Duration(days: 3)),
-      description: "Bank Transfer",
-      amount: -500.00,
-      type: TransactionType.debit,
-      icon: Icons.swap_horiz,
-    ),
-    Transaction(
-      date: DateTime.now().subtract(const Duration(days: 4)),
-      description: "Salary Deposit",
-      amount: 15000.00,
-      type: TransactionType.credit,
-      icon: Icons.account_balance,
-    ),
-    Transaction(
-      date: DateTime.now().subtract(const Duration(days: 5)),
-      description: "Utility Payment",
-      amount: -3200.00,
-      type: TransactionType.debit,
-      icon: Icons.receipt_long,
-    ),
-  ];
+  void _initializeData() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+      if (args != null && args['loginData'] != null) {
+        setState(() {
+          _loginData = args['loginData'];
+          _loadApiData();
+        });
+      }
+    });
+  }
 
+  void _loadApiData() {
+    if (_loginData == null) return;
+    
+    // Updating balance from API
+    final balance = _loginData!['balance'];
+    if (balance != null && balance['Balance'] != null) {
+      _accountBalance = balance['Balance'].toDouble();
+    }
+    
+    // Updating transactions from API
+    final statements = _loginData!['statement'] as List<dynamic>?;
+    if (statements != null) {
+      _apiTransactions = statements;
+      _updateMiniStatement();
+    }
+  }
+
+  void _updateMiniStatement() {
+    List<Transaction> apiTransactions = _apiTransactions.map((txn) {
+      double amount = txn['Amount']?.toDouble() ?? 0.0;
+      String description = txn['Description'] ?? 'Transaction';
+      
+      DateTime date = DateTime.now();
+      try {
+        if (txn['TrxDate'] != null) {
+          date = DateTime.parse(txn['TrxDate']);
+        }
+      } catch (e) {
+        print('Date parsing error: $e');
+      }
+      
+      TransactionType type = amount >= 0 ? TransactionType.credit : TransactionType.debit;
+      IconData icon = Icons.account_balance;
+      
+      if (description.toLowerCase().contains('deposit')) {
+        icon = Icons.add_circle_outline;
+      } else if (description.toLowerCase().contains('interest')) {
+        icon = Icons.trending_up;
+      } else if (description.toLowerCase().contains('repayment')) {
+        icon = Icons.payment;
+      }
+      
+      return Transaction(
+        date: date,
+        description: description,
+        amount: amount,
+        type: type,
+        icon: icon,
+      );
+    }).toList();
+    
+    apiTransactions.sort((a, b) => b.date.compareTo(a.date));
+    _miniStatement = apiTransactions.take(5).toList();
+  }
   String get _lastLoginTime {
+    if (_loginData != null && _loginData!['LoginInfo'] != null) {
+      final loginInfo = _loginData!['LoginInfo'];
+      final lastDate = loginInfo['LastLoginDate'];
+      final lastTime = loginInfo['LastLoginTime'];
+      
+      if (lastDate != null && lastTime != null) {
+        try {
+          final dateTime = DateTime.parse('$lastDate $lastTime');
+          return DateFormat('dd MMMM yyyy, HH:mm').format(dateTime);
+        } catch (e) {
+          print('Date parsing error: $e');
+        }
+      }
+    }
+    
     final now = DateTime.now();
     final lastLogin = now.subtract(const Duration(hours: 2, minutes: 18));
     return DateFormat('dd MMMM yyyy, HH:mm').format(lastLogin);

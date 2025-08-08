@@ -103,7 +103,7 @@ class _LoginScreenState extends State<LoginScreen> {
             backgroundColor: Colors.green,
           ),
         );
-        _showSuccessDialog();
+        _showSuccessDialog(result['data']);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -147,7 +147,7 @@ class _LoginScreenState extends State<LoginScreen> {
             backgroundColor: Colors.green,
           ),
         );
-        _showSuccessDialog();
+        _showSuccessDialog(null);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -170,7 +170,7 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  void _showSuccessDialog() {
+  void _showSuccessDialog(Map<String, dynamic>? loginData) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -192,8 +192,9 @@ class _LoginScreenState extends State<LoginScreen> {
                   '/dashboard',
                   (route) => false,
                   arguments: {
+                    'loginData': loginData,
                     'mobileNumber': _mobileNumberController.text,
-                    'email': 'winniejomo17@gmail.com',
+                    'email': loginData?['Email'] ?? loginData?['EmailAddress'] ?? '',
                     'profileImageBytes': widget.profileImageBytes,
                     'profileImageFile': widget.profileImageFile,
                   },
