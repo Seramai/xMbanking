@@ -167,7 +167,14 @@ class _DepositDialogState extends State<DepositDialog> {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
       ),
-      child: Padding(
+      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24), 
+      child: Container( 
+      width: double.infinity,
+      constraints: BoxConstraints(
+      maxHeight: MediaQuery.of(context).size.height * 0.9, 
+      maxWidth: 400,
+      ),
+      child: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Form(
           key: _formKey,
@@ -405,6 +412,7 @@ class _DepositDialogState extends State<DepositDialog> {
             ],
           ),
         ),
+      ),
       ),
     );
   }

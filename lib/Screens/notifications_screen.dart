@@ -134,24 +134,29 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       appBar: AppBar(
         title: Row(
           children: [
-            const Text('NOTIFICATIONS', style: TextStyle(
-              fontWeight: FontWeight.w900,
-              fontSize: 18,
-              letterSpacing: 0.5,
-            )),
+            const Flexible(
+              child: Text(
+                'NOTIFICATIONS',
+                style: TextStyle(
+                  fontWeight: FontWeight.w900,
+                  fontSize: 16,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ),
             if (_unreadCount > 0) ...[
               const SizedBox(width: 8),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
                   color: Colors.red,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text(
                   '$_unreadCount',
                   style: const TextStyle(
                     color: Colors.white,
-                    fontSize: 12,
+                    fontSize: 11,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -167,15 +172,18 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         ),
         actions: [
           if (_unreadCount > 0)
-            TextButton(
-              onPressed: _markAllAsRead,
-              child: const Text(
-                'MARK ALL READ',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w800,
-                  fontSize: 14,
-                  letterSpacing: 0.5,
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: TextButton(
+                onPressed: _markAllAsRead,
+                child: const Text(
+                  'MARK ALL READ',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 12,
+                    letterSpacing: 0.3,
+                  ),
                 ),
               ),
             ),
@@ -216,13 +224,13 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                 ),
               )
             : ListView.builder(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 itemCount: _notifications.length,
                 itemBuilder: (context, index) {
                   final notification = _notifications[index];
                   return Card(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    elevation: notification.isRead ? 2 : 4,
+                    margin: const EdgeInsets.only(bottom: 8),
+                    elevation: notification.isRead ? 1 : 3,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -233,12 +241,12 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                         border: notification.isRead
                             ? null
                             : Border.all(
-                                color: darkBlue.withOpacity(0.2),
+                                color: darkBlue.withOpacity(0.15),
                                 width: 1,
                               ),
                       ),
                       child: ListTile(
-                        contentPadding: const EdgeInsets.all(16),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                         leading: Container(
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
@@ -248,7 +256,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                           child: Icon(
                             _getNotificationIcon(notification.type),
                             color: _getNotificationColor(notification.type),
-                            size: 24,
+                            size: 20,
                           ),
                         ),
                         title: Row(
@@ -258,18 +266,20 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                 notification.title,
                                 style: TextStyle(
                                   fontWeight: notification.isRead 
-                                      ? FontWeight.w700 
-                                      : FontWeight.w900, 
-                                  fontSize: 16,
+                                      ? FontWeight.w600 
+                                      : FontWeight.w800, 
+                                  fontSize: 14,
                                   color: Colors.black87,
-                                  letterSpacing: 0.3,
+                                  letterSpacing: 0.1,
                                 ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
                             if (!notification.isRead)
                               Container(
-                                width: 8,
-                                height: 8,
+                                width: 6,
+                                height: 6,
                                 decoration: const BoxDecoration(
                                   color: Colors.red,
                                   shape: BoxShape.circle,
@@ -285,52 +295,82 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                               notification.message,
                               style: TextStyle(
                                 color: Colors.grey[700],
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600, 
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                                height: 1.3,
                               ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
                             ),
-                            const SizedBox(height: 8),
+                            const SizedBox(height: 6),
                             Text(
                               DateFormat('MMM dd, yyyy • hh:mm a').format(notification.timestamp),
                               style: TextStyle(
-                                color: Colors.grey[600],
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
+                                color: Colors.grey[500],
+                                fontSize: 10,
+                                fontWeight: FontWeight.w500,
                               ),
                             ),
                           ],
                         ),
-                        trailing: PopupMenuButton<String>(
-                          onSelected: (value) {
-                            if (value == 'mark_read' && !notification.isRead) {
-                              _markAsRead(notification.id);
-                            } else if (value == 'delete') {
-                              _deleteNotification(notification.id);
-                            }
-                          },
-                          itemBuilder: (context) => [
-                            if (!notification.isRead)
+                        trailing: SizedBox(
+                          width: 24,
+                          child: PopupMenuButton<String>(
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                            icon: Icon(
+                              Icons.more_vert,
+                              size: 18,
+                              color: Colors.grey[600],
+                            ),
+                            onSelected: (value) {
+                              if (value == 'mark_read' && !notification.isRead) {
+                                _markAsRead(notification.id);
+                              } else if (value == 'delete') {
+                                _deleteNotification(notification.id);
+                              }
+                            },
+                            itemBuilder: (context) => [
+                              if (!notification.isRead)
+                                const PopupMenuItem(
+                                  value: 'mark_read',
+                                  height: 40,
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(Icons.mark_email_read, size: 16),
+                                      SizedBox(width: 8),
+                                      Text(
+                                        'Mark as Read',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 13,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
                               const PopupMenuItem(
-                                value: 'mark_read',
+                                value: 'delete',
+                                height: 40,
                                 child: Row(
+                                  mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    Icon(Icons.mark_email_read, size: 18),
+                                    Icon(Icons.delete, size: 16, color: Colors.red),
                                     SizedBox(width: 8),
-                                    Text('Mark as Read', style: TextStyle(fontWeight: FontWeight.bold)),
+                                    Text(
+                                      'Delete',
+                                      style: TextStyle(
+                                        color: Colors.red,
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 13,
+                                      ),
+                                    ),
                                   ],
                                 ),
                               ),
-                            const PopupMenuItem(
-                              value: 'delete',
-                              child: Row(
-                                children: [
-                                  Icon(Icons.delete, size: 18, color: Colors.red),
-                                  SizedBox(width: 8),
-                                  Text('Delete', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
-                                ],
-                              ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                         onTap: () {
                           if (!notification.isRead) {
@@ -338,7 +378,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                           }
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
-                              content: Text('Tapped: ${notification.title}', style: const TextStyle(fontWeight: FontWeight.bold)),
+                              content: Text(
+                                'Tapped: ${notification.title}',
+                                style: const TextStyle(fontWeight: FontWeight.bold),
+                              ),
                               duration: const Duration(seconds: 1),
                             ),
                           );

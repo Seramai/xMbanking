@@ -400,9 +400,15 @@ Widget build(BuildContext context) {
                                         },
                                         activeColor: Theme.of(context).primaryColor,
                                       ),
-                                      const Text('Remember me'),
+                                      const Text(
+                                        'Remember me',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold
+                                        ),
+                                      ),
                                     ],
                                   ),
+                                  const SizedBox(width: 10),
                                   GestureDetector(
                                     onTap: _handleForgotPin,
                                     child: Text(
@@ -410,8 +416,7 @@ Widget build(BuildContext context) {
                                       style: TextStyle(
                                         color: Theme.of(context).primaryColor,
                                         fontSize: 14,
-                                        fontWeight: FontWeight.w500,
-                                        decoration: TextDecoration.underline,
+                                        fontWeight: FontWeight.bold,
                                       ),
                                     ),
                                   ),
@@ -456,40 +461,40 @@ Widget build(BuildContext context) {
                                         ),
                                 ),
                               ),
-                              if (_isBiometricAvailable) ...[
-                                const SizedBox(height: 16),
-                                SizedBox(
-                                  width: double.infinity,
-                                  child: OutlinedButton(
-                                    onPressed: _isLoading ? null : _performBiometricLogin,
-                                    style: OutlinedButton.styleFrom(
-                                      side: BorderSide(color: Theme.of(context).primaryColor, width: 2),
-                                      padding: const EdgeInsets.symmetric(vertical: 16),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                    ),
-                                    child: Row(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        Icon(
-                                          Icons.fingerprint,
-                                          color: Theme.of(context).primaryColor,
-                                        ),
-                                        const SizedBox(width: 8),
-                                        Text(
-                                          'Use Biometric',
-                                          style: TextStyle(
-                                            color: Theme.of(context).primaryColor,
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.w500,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ],
+                              // if (_isBiometricAvailable) ...[
+                              //   const SizedBox(height: 16),
+                              //   SizedBox(
+                              //     width: double.infinity,
+                              //     child: OutlinedButton(
+                              //       onPressed: _isLoading ? null : _performBiometricLogin,
+                              //       style: OutlinedButton.styleFrom(
+                              //         side: BorderSide(color: Theme.of(context).primaryColor, width: 2),
+                              //         padding: const EdgeInsets.symmetric(vertical: 16),
+                              //         shape: RoundedRectangleBorder(
+                              //           borderRadius: BorderRadius.circular(8),
+                              //         ),
+                              //       ),
+                              //       child: Row(
+                              //         mainAxisAlignment: MainAxisAlignment.center,
+                              //         children: [
+                              //           Icon(
+                              //             Icons.fingerprint,
+                              //             color: Theme.of(context).primaryColor,
+                              //           ),
+                              //           const SizedBox(width: 8),
+                              //           Text(
+                              //             'Use Biometric',
+                              //             style: TextStyle(
+                              //               color: Theme.of(context).primaryColor,
+                              //               fontSize: 16,
+                              //               fontWeight: FontWeight.w500,
+                              //             ),
+                              //           ),
+                              //         ],
+                              //       ),
+                              //     ),
+                              //   ),
+                              // ],
                             ],
                           ),
                         ),

@@ -26,7 +26,6 @@ class UserProfileScreen extends StatelessWidget {
           title: const Row(
             children: [
               Icon(Icons.logout, color: Color.fromARGB(255, 25, 35, 126)),
-              SizedBox(width: 8),
               Text('Logout Confirmation'),
             ],
           ),
@@ -107,6 +106,7 @@ class UserProfileScreen extends StatelessWidget {
           ),
         ),
         child: SafeArea(
+          child: SingleChildScrollView( 
           child: Padding(
             padding: const EdgeInsets.all(24),
             child: Column(
@@ -249,8 +249,6 @@ class UserProfileScreen extends StatelessWidget {
                     ),
                   ),
                 ),
-                
-                const Spacer(),
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton.icon(
@@ -271,6 +269,7 @@ class UserProfileScreen extends StatelessWidget {
                 const SizedBox(height: 20),
               ],
             ),
+          ),
           ),
         ),
       ),

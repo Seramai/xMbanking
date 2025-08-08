@@ -193,7 +193,6 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
       });
     }
   }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -202,136 +201,152 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
         backgroundColor: Theme.of(context).primaryColor,
         foregroundColor: Colors.white,
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          children: [
-            const SizedBox(height: 40),
-            const Icon(
-              Icons.mark_email_read,
-              size: 80,
-              color: Colors.blue,
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              minHeight: MediaQuery.of(context).size.height - 
+                        MediaQuery.of(context).padding.top - 
+                        kToolbarHeight - 48,
             ),
-            const SizedBox(height: 24),
-            
-            const Text(
-              'Enter Verification Code',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-             'We sent a 6-digit code to\n${widget.mobileNumber}',
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 16,
-                color: Colors.grey,
-              ),
-            ),
-            const SizedBox(height: 40),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: List.generate(6, (index) {
-                return SizedBox(
-                  width: 45,
-                  height: 55,
-                  child: TextFormField(
-                    controller: _otpControllers[index],
-                    focusNode: _focusNodes[index],
-                    textAlign: TextAlign.center,
-                    keyboardType: TextInputType.number,
-                    maxLength: 1,
-                    style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    inputFormatters: [
-                      FilteringTextInputFormatter.digitsOnly,
-                    ],
-                    decoration: InputDecoration(
-                      counterText: '',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                SizedBox(height: MediaQuery.of(context).size.height * 0.03),
+                
+                const Icon(
+                  Icons.mark_email_read,
+                  size: 80,
+                  color: Colors.blue,
+                ),
+                SizedBox(height: MediaQuery.of(context).size.height * 0.025),
+                
+                const Text(
+                  'Enter Verification Code',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                
+                Text(
+                  'We sent a 6-digit code to\n${widget.mobileNumber}',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    color: Colors.grey,
+                  ),
+                ),
+                SizedBox(height: MediaQuery.of(context).size.height * 0.04),
+                
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: List.generate(6, (index) {
+                    return SizedBox(
+                      width: 45,
+                      height: 55,
+                      child: TextFormField(
+                        controller: _otpControllers[index],
+                        focusNode: _focusNodes[index],
+                        textAlign: TextAlign.center,
+                        keyboardType: TextInputType.number,
+                        maxLength: 1,
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly,
+                        ],
+                        decoration: InputDecoration(
+                          counterText: '',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(
+                              color: Theme.of(context).primaryColor,
+                              width: 2,
+                            ),
+                          ),
+                        ),
+                        onChanged: (value) => _onOTPChanged(value, index),
                       ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: BorderSide(
-                          color: Theme.of(context).primaryColor,
-                          width: 2,
+                    );
+                  }),
+                ),
+                SizedBox(height: MediaQuery.of(context).size.height * 0.04),
+                
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: _isLoading ? null : _verifyOTP,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Theme.of(context).primaryColor,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                    ),
+                    child: _isLoading
+                        ? const Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                ),
+                              ),
+                              SizedBox(width: 12),
+                              Text('Verifying...'),
+                            ],
+                          )
+                        : const Text(
+                            'Verify Account',
+                            style: TextStyle(fontSize: 16),
+                          ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Text("Didn't receive the code? "),
+                    GestureDetector(
+                      onTap: _resendTimer == 0 && !_isResending ? _resendOTP : null,
+                      child: Text(
+                        _resendTimer > 0 
+                          ? 'Resend in ${_resendTimer}s'
+                          : _isResending 
+                            ? 'Sending...'
+                            : 'Resend OTP',
+                        style: TextStyle(
+                          color: _resendTimer == 0 && !_isResending 
+                            ? Theme.of(context).primaryColor 
+                            : Colors.grey,
+                          fontWeight: FontWeight.bold,
+                          decoration: _resendTimer == 0 && !_isResending 
+                            ? TextDecoration.underline 
+                            : null,
                         ),
                       ),
                     ),
-                    onChanged: (value) => _onOTPChanged(value, index),
-                  ),
-                );
-              }),
-            ),
-            const SizedBox(height: 40),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: _isLoading ? null : _verifyOTP,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Theme.of(context).primaryColor,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  ],
                 ),
-                child: _isLoading
-                    ? const Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                            ),
-                          ),
-                          SizedBox(width: 12),
-                          Text('Verifying...'),
-                        ],
-                      )
-                    : const Text(
-                        'Verify Account',
-                        style: TextStyle(fontSize: 16),
-                      ),
-              ),
-            ),
-            const SizedBox(height: 24),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Text("Didn't receive the code? "),
-                GestureDetector(
-                  onTap: _resendTimer == 0 && !_isResending ? _resendOTP : null,
-                  child: Text(
-                    _resendTimer > 0 
-                      ? 'Resend in ${_resendTimer}s'
-                      : _isResending 
-                        ? 'Sending...'
-                        : 'Resend OTP',
-                    style: TextStyle(
-                      color: _resendTimer == 0 && !_isResending 
-                        ? Theme.of(context).primaryColor 
-                        : Colors.grey,
-                      fontWeight: FontWeight.bold,
-                      decoration: _resendTimer == 0 && !_isResending 
-                        ? TextDecoration.underline 
-                        : null,
-                    ),
-                  ),
+                const SizedBox(height: 20),
+                
+                TextButton(
+                  onPressed: _clearOTP,
+                  child: const Text('Clear'),
                 ),
               ],
             ),
-            const SizedBox(height: 20),
-            TextButton(
-              onPressed: _clearOTP,
-              child: const Text('Clear'),
-            ),
-          ],
+          ),
         ),
       ),
     );
