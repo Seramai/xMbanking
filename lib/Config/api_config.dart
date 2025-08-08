@@ -67,6 +67,30 @@ class ApiConfig{
     }
     return baseUrl + endpoint;
   }
+  // retrieving the deposit url
+  static String get depositUrl{
+    final endpoint = dotenv.env['DEPOSIT_URL'];
+    if(endpoint == null || endpoint.isEmpty){
+      throw Exception("DEPOSIT URL not found in the env file");
+    }
+    return baseUrl + endpoint;
+  }
+  // retrieving the withdraw url
+  static String get withdrawUrl{
+    final endpoint = dotenv.env['WITHDRAW_URL'];
+    if(endpoint == null || endpoint.isEmpty){
+      throw Exception("WITHDRAW URL not found in the env file");
+    }
+    return baseUrl + endpoint;
+  }
+  // this is the deposit/withdraw header only
+  static Map<String, String> getTransactionHeaders(String token){
+    return{
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $token',
+      'Accept': 'application/json',
+    };
+  }
   // getting the headers that will be used in the api
   static Map<String, String> get headers{
     return {

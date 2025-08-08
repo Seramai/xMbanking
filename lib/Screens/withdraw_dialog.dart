@@ -1,14 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../Services/api_service.dart';
 
 class WithdrawDialog extends StatefulWidget {
   final Function(double amount, String phoneNumber) onWithdrawSuccess;
   final double currentBalance;
+  final String authToken;
 
   const WithdrawDialog({
     super.key,
     required this.onWithdrawSuccess,
     required this.currentBalance,
+    required this.authToken,
   });
 
   @override
@@ -76,16 +79,59 @@ class _WithdrawDialogState extends State<WithdrawDialog> {
     return cleanedPhone;
   }
 
-  void _processWithdraw() {
+  void _processWithdraw() async {
     if (_formKey.currentState!.validate()) {
       setState(() {
         _isProcessing = true;
       });
-      Future.delayed(const Duration(seconds: 2), () {
-        if (mounted) {
-          _showStkPushDialog();
+
+      try {
+        String? authToken = widget.authToken; 
+        
+        if (authToken == null || authToken.isEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Authentication error. Please login again.'),
+              backgroundColor: Colors.red,
+            ),
+          );
+          setState(() {
+            _isProcessing = false;
+          });
+          return;
         }
-      });
+
+        final result = await ApiService.processWithdraw(
+          token: authToken,
+          phoneNumber: _formatPhoneNumber(_phoneController.text),
+          amount: double.parse(_amountController.text),
+          remarks: "Withdrawal from wallet",
+        );
+
+        if (result['success'] == true) {
+          _showStkPushDialog(); 
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(result['message'] ?? 'Withdrawal request failed'),
+              backgroundColor: Colors.red,
+            ),
+          );
+          setState(() {
+            _isProcessing = false;
+          });
+        }
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Withdrawal failed: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        setState(() {
+          _isProcessing = false;
+        });
+      }
     }
   }
 

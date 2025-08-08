@@ -110,6 +110,8 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
       );
       
       if (result['success'] == true) {
+        // extracting token from response so as to be used for the depoit/withdraw later
+        String? authToken = result['data']?['token']?? result['data']?['accessToken'];
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('OTP verified successfully!'),
@@ -123,6 +125,7 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
           arguments: {
             // result is the full otp verification response
             'loginData': result,
+            'authToken': authToken,
             'mobileNumber': widget.mobileNumber,
             'email': widget.email,
             'profileImageBytes': widget.profileImageBytes,

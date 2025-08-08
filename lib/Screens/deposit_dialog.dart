@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../Services/api_service.dart';
 
 class DepositDialog extends StatefulWidget {
   final Function(double amount, String phoneNumber) onDepositSuccess;
+  final String authToken;
 
   const DepositDialog({
     super.key,
     required this.onDepositSuccess,
+    required this.authToken,
   });
 
   @override
@@ -17,12 +20,14 @@ class _DepositDialogState extends State<DepositDialog> {
   final _formKey = GlobalKey<FormState>();
   final _amountController = TextEditingController();
   final _phoneController = TextEditingController();
+  final _remarksController = TextEditingController();
   bool _isProcessing = false;
 
   @override
   void dispose() {
     _amountController.dispose();
     _phoneController.dispose();
+    _remarksController.dispose();
     super.dispose();
   }
 
@@ -72,16 +77,59 @@ class _DepositDialogState extends State<DepositDialog> {
     return cleanedPhone;
   }
 
-  void _processDeposit() {
+  void _processDeposit() async {
     if (_formKey.currentState!.validate()) {
       setState(() {
         _isProcessing = true;
       });
-      Future.delayed(const Duration(seconds: 2), () {
-        if (mounted) {
-          _showStkPushDialog();
+
+      try {
+        String? authToken = widget.authToken; 
+        
+        if (authToken.isEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Authentication error. Please login again.'),
+              backgroundColor: Colors.red,
+            ),
+          );
+          setState(() {
+            _isProcessing = false;
+          });
+          return;
         }
-      });
+
+        final result = await ApiService.processDeposit(
+          token: authToken,
+          phoneNumber: _formatPhoneNumber(_phoneController.text),
+          amount: double.parse(_amountController.text),
+          remarks: _remarksController.text.isEmpty ? null : _remarksController.text,
+        );
+
+        if (result['success'] == true) {
+          _showStkPushDialog(); 
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(result['message'] ?? 'Deposit request failed'),
+              backgroundColor: Colors.red,
+            ),
+          );
+          setState(() {
+            _isProcessing = false;
+          });
+        }
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Deposit failed: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        setState(() {
+          _isProcessing = false;
+        });
+      }
     }
   }
 
@@ -240,6 +288,44 @@ class _DepositDialogState extends State<DepositDialog> {
                 ),
                 validator: _validatePhone,
                 enabled: !_isProcessing,
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                'Remarks (Optional)',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.grey,
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextFormField(
+                controller: _remarksController,
+                decoration: InputDecoration(
+                  hintText: 'Enter remarks for this deposit',
+                  prefixIcon: const Icon(Icons.note),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.grey.shade300),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.grey.shade300),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Theme.of(context).primaryColor),
+                  ),
+                  filled: true,
+                  fillColor: Colors.grey.shade50,
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 16,
+                  ),
+                ),
+                enabled: !_isProcessing,
+                maxLines: 2,
+                maxLength: 100,
               ),
               const SizedBox(height: 24),
               SizedBox(
@@ -519,7 +605,7 @@ class _StkPushDialogState extends State<StkPushDialog>
               'Check your phone for M-Pesa prompt',
               textAlign: TextAlign.center,
               style: TextStyle(
-                color: Colors.white,
+                color: Colors.grey.shade600,
                 fontSize: 14,
               ),
             ),

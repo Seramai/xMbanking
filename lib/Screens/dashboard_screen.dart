@@ -102,9 +102,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
       String description = txn['Description'] ?? 'Transaction';
       
       DateTime date = DateTime.now();
-      try {
-        if (txn['TrxDate'] != null) {
-          date = DateTime.parse(txn['TrxDate']);
+        try {
+          if (txn['TrxDate'] != null) {
+            String dateString = txn['TrxDate'].toString();
+            List<String> parts = dateString.split(' ');
+          if (parts.length == 2) {
+            List<String> dateParts = parts[0].split('/');
+            String timePart = parts[1];
+            
+            if (dateParts.length == 3) {
+              // Converting MM/dd/yyyy to yyyy-MM-dd format
+              String isoDate = '${dateParts[2]}-${dateParts[0].padLeft(2, '0')}-${dateParts[1].padLeft(2, '0')}T$timePart';
+              date = DateTime.parse(isoDate);
+            }
+          }
         }
       } catch (e) {
         print('Date parsing error: $e');
@@ -193,10 +204,27 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
     void _handleDeposit() {
+  // getting the authtoken from whats shown on the dashboard
+    String? authToken;
+     if (_loginData != null && _loginData!['data'] != null) {
+        final actualData = _loginData!['data'] as Map<String, dynamic>;
+        authToken = actualData['Token']; 
+        print("Extracted token: ${authToken?.substring(0, 20)}..."); 
+      }
+    if (authToken == null || authToken.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Authentication error. Please login again.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return DepositDialog(
+          authToken: authToken!,
           onDepositSuccess: (double amount, String phoneNumber) {
             // Updates the account balance 
             setState(() {
@@ -210,14 +238,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 type: TransactionType.credit,
                 icon: Icons.phone_android,
               ));
-              
-              // Keeps only the last 5 transactions for the mini statement
               if (_miniStatement.length > 5) {
                 _miniStatement.removeRange(5, _miniStatement.length);
               }
             });
-            
-            // Show success snackbar
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Row(
@@ -241,11 +265,28 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
     void _handleWithdraw() {
+    String? authToken;
+    if (_loginData != null && _loginData!['data'] != null) {
+      final actualData = _loginData!['data'] as Map<String, dynamic>;
+      authToken = actualData['Token']; 
+      print("Extracted token for withdrawal: ${authToken?.substring(0, 20)}..."); 
+    }
+    if (authToken == null || authToken.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Authentication error. Please login again.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return WithdrawDialog(
           currentBalance: _accountBalance,
+          authToken: authToken!,
           onWithdrawSuccess: (double amount, String phoneNumber) {
             // Updates the account balance
             setState(() {

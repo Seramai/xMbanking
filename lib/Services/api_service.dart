@@ -337,6 +337,227 @@ class ApiService {
       };
     }
   }
+  // handles the deposit functionality
+  static Future<Map<String, dynamic>> processDeposit({
+    required String token,
+    required String phoneNumber,
+    required double amount,
+    String? remarks,
+  }) async {
+    try {
+      // Clean up remarks 
+      String cleanedRemarks = remarks?.trim().replaceAll('\n', ' ') ?? "Deposit to wallet";
+      
+      final requestBody = {
+        "Msisdn": phoneNumber,
+        "Amount": amount,
+        "Remarks": cleanedRemarks,
+      };
+      
+      print("Processing deposit for: $phoneNumber");
+      print("Deposit URL: ${ApiConfig.depositUrl}");
+      print("Request headers: ${ApiConfig.getTransactionHeaders(token)}"); 
+      print("Request body: ${jsonEncode(requestBody)}");
+      
+      // Add connection check
+      try {
+        final connectivity = await Connectivity().checkConnectivity();
+        print("Network connectivity: $connectivity");
+        if (connectivity == ConnectivityResult.none) {
+          return {
+            'success': false,
+            'message': 'No internet connection - please check your network',
+          };
+        }
+      } catch (e) {
+        print("Connectivity check failed: $e");
+      }
+
+      final response = await http.post(
+        Uri.parse(ApiConfig.depositUrl),
+        headers: ApiConfig.getTransactionHeaders(token),
+        body: jsonEncode(requestBody),
+      ).timeout(
+        const Duration(seconds: 30),
+        onTimeout: () {
+          throw Exception('Deposit request timeout - please check your internet connection');
+        },
+      );
+      
+      print("Deposit response status: ${response.statusCode}");
+      print("Deposit response body: ${response.body}");
+      
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final responseData = jsonDecode(response.body);
+        return {
+          'success': true,
+          'message': 'Deposit request successful',
+          'data': responseData,
+        };
+      } else if (response.statusCode == 400) {
+        final errorData = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': errorData['message'] ?? 'Deposit request failed',
+          'errors': errorData,
+        };
+      } else if (response.statusCode == 401) {
+        return {
+          'success': false,
+          'message': 'Unauthorized - please login again',
+        };
+      } else {
+        return {
+          'success': false,
+          'message': 'Deposit failed: ${response.statusCode}',
+        };
+      }
+    } on SocketException catch (e) {
+      print("Socket Exception: $e");
+      return {
+        'success': false,
+        'message': 'Network error - please check your internet connection',
+      };
+    } on http.ClientException catch (e) {
+      print("HTTP Client Exception: $e");
+      return {
+        'success': false,
+        'message': 'Connection failed - please try again',
+      };
+    } on FormatException catch (e) {
+      print("Format Exception: $e");
+      return {
+        'success': false,
+        'message': 'Invalid server response format',
+      };
+    } catch (e) {
+      print("Deposit error: $e");
+      if (e.toString().contains('timeout')) {
+        return {
+          'success': false,
+          'message': 'Deposit request timeout - please check your internet connection',
+        };
+      } else if (e.toString().contains('Invalid status code 0')) {
+        return {
+          'success': false,
+          'message': 'Connection failed - please check your network and try again',
+        };
+      }
+      return {
+        'success': false,
+        'message': 'Deposit failed: ${e.toString()}',
+      };
+    }
+  }
+    // handles the withdraw functionality
+  static Future<Map<String, dynamic>> processWithdraw({
+    required String token,
+    required String phoneNumber,
+    required double amount,
+    String? remarks,
+  }) async {
+    try {
+      String cleanedRemarks = remarks?.trim().replaceAll('\n', ' ') ?? "Withdrawal from wallet";
+      
+      final requestBody = {
+        "Msisdn": phoneNumber,
+        "Amount": amount,
+        "Remarks": cleanedRemarks,
+      };
+      
+      print("Processing withdrawal for: $phoneNumber");
+      print("Withdraw URL: ${ApiConfig.withdrawUrl}");
+      print("Request headers: ${ApiConfig.getTransactionHeaders(token)}"); 
+      print("Request body: ${jsonEncode(requestBody)}");
+      try {
+        final connectivity = await Connectivity().checkConnectivity();
+        print("Network connectivity: $connectivity");
+        if (connectivity == ConnectivityResult.none) {
+          return {
+            'success': false,
+            'message': 'No internet connection - please check your network',
+          };
+        }
+      } catch (e) {
+        print("Connectivity check failed: $e");
+      }
+
+      final response = await http.post(
+        Uri.parse(ApiConfig.withdrawUrl),
+        headers: ApiConfig.getTransactionHeaders(token),
+        body: jsonEncode(requestBody),
+      ).timeout(
+        const Duration(seconds: 30),
+        onTimeout: () {
+          throw Exception('Withdrawal request timeout - please check your internet connection');
+        },
+      );
+      
+      print("Withdraw response status: ${response.statusCode}");
+      print("Withdraw response body: ${response.body}");
+      
+      if (response.statusCode == 200 || response.statusCode == 201 || response.statusCode == 202) {
+        final responseData = jsonDecode(response.body);
+        return {
+          'success': true,
+          'message': 'Withdrawal request successful',
+          'data': responseData,
+        };
+      } else if (response.statusCode == 400) {
+        final errorData = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': errorData['message'] ?? 'Withdrawal request failed',
+          'errors': errorData,
+        };
+      } else if (response.statusCode == 401) {
+        return {
+          'success': false,
+          'message': 'Unauthorized - please login again',
+        };
+      } else {
+        return {
+          'success': false,
+          'message': 'Withdrawal failed: ${response.statusCode}',
+        };
+      }
+    } on SocketException catch (e) {
+      print("Socket Exception: $e");
+      return {
+        'success': false,
+        'message': 'Network error - please check your internet connection',
+      };
+    } on http.ClientException catch (e) {
+      print("HTTP Client Exception: $e");
+      return {
+        'success': false,
+        'message': 'Connection failed - please try again',
+      };
+    } on FormatException catch (e) {
+      print("Format Exception: $e");
+      return {
+        'success': false,
+        'message': 'Invalid server response format',
+      };
+    } catch (e) {
+      print("Withdrawal error: $e");
+      if (e.toString().contains('timeout')) {
+        return {
+          'success': false,
+          'message': 'Withdrawal request timeout - please check your internet connection',
+        };
+      } else if (e.toString().contains('Invalid status code 0')) {
+        return {
+          'success': false,
+          'message': 'Connection failed - please check your network and try again',
+        };
+      }
+      return {
+        'success': false,
+        'message': 'Withdrawal failed: ${e.toString()}',
+      };
+    }
+  }
   // Convert ID type to API code
   static String _convertIdTypeToCode(String identificationType) {
     switch (identificationType) {
