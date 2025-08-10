@@ -171,6 +171,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _showSuccessDialog(Map<String, dynamic>? loginData) {
+    final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -186,7 +187,6 @@ class _LoginScreenState extends State<LoginScreen> {
           actions: [
             ElevatedButton(
               onPressed: () {
-                // Check if userId exists in login response
                 String? userId = loginData?['UserId'] ?? loginData?['userId'];
                 if (userId == null) {
                   Navigator.of(context).pop();
@@ -210,6 +210,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     'loginData': loginData,
                     'profileImageBytes': widget.profileImageBytes,
                     'profileImageFile': widget.profileImageFile,
+                    'fromRegistration': args?['fromRegistration'] ?? false, 
                   },
                 );
               },

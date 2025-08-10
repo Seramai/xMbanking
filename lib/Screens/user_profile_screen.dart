@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart'; 
 
+
 class UserProfileScreen extends StatelessWidget {
   final String username;
   final String email;
@@ -10,6 +11,7 @@ class UserProfileScreen extends StatelessWidget {
   final File? profileImageFile;
   final Uint8List? profileImageBytes;
   final String? authToken; 
+  final Map<String, dynamic>? loginData;
   
   const UserProfileScreen({
     super.key,
@@ -18,6 +20,7 @@ class UserProfileScreen extends StatelessWidget {
     this.profileImageFile,  
     this.profileImageBytes,
     this.authToken, 
+    this.loginData,
   });
 
   void _logout(BuildContext context) {
@@ -233,28 +236,29 @@ class UserProfileScreen extends StatelessWidget {
                             SizedBox(
                               width: double.infinity,
                               child: OutlinedButton.icon(
-                                onPressed: () {
-                                  // Check if auth token is available
-                                  if (authToken == null || authToken!.isEmpty) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text('Authentication error. Please login again to change PIN.'),
-                                        backgroundColor: Colors.red,
-                                      ),
-                                    );
-                                    return;
-                                  }
-                                  Navigator.pushNamed(
-                                    context,
-                                    '/change-pin',
-                                    arguments: {
-                                      'authToken': authToken!,
-                                      'isFirstTime': false,
-                                      'username': username,
-                                      'email': email,
-                                    },
-                                  );
+                            onPressed: () {
+                              if (authToken == null || authToken!.isEmpty) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Authentication error. Please login again to change PIN.'),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                                return;
+                              }
+                              
+                              Navigator.pushNamed(
+                                context,
+                                '/change-pin',
+                                arguments: {
+                                  'authToken': authToken!,
+                                  'isFirstTime': false,
+                                  'username': username,
+                                  'email': email,
+                                  'loginData': loginData,
                                 },
+                              );
+                            },
                                 icon: const Icon(Icons.lock),
                                 label: const Text('Change PIN'),
                                 style: OutlinedButton.styleFrom(

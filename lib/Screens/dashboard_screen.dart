@@ -7,6 +7,8 @@ import 'dart:io';
 import 'dart:typed_data';
 import 'deposit_dialog.dart';
 import 'withdraw_dialog.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert'; 
 
 
 class DashboardScreen extends StatefulWidget {
@@ -42,61 +44,108 @@ class _DashboardScreenState extends State<DashboardScreen> {
     super.initState();
     _initializeData();
   }
-
   void _initializeData() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
-      if (args != null && args['loginData'] != null) {
-        print("Received loginData in dashboard:");
-        print("LoginData keys: ${args['loginData'].keys}");
-        print("LoginData structure: ${args['loginData']}");
-        setState(() {
-          _loginData = args['loginData'];
+      
+      if (args != null) {
+        if (args['loginData'] != null) {
+          setState(() {
+            _loginData = args['loginData'];
+            if (args['useStoredData'] == true || 
+            _loginData?['needsRefresh'] == true ||
+            _loginData?['data']?['balance'] == null) {
+          _refreshDashboardOnInit(args['authToken'] ?? _loginData?['data']?['Token'] ?? '');
+        } else {
           _loadApiData();
-        });
+        }
+      });
+        }
+        else if (args['authToken'] != null) {
+          _refreshDashboardOnInit(args['authToken']);
+        }
+      } else {
+        _loadStoredData();
       }
     });
   }
+  Future<void> _refreshDashboardOnInit(String authToken) async {
+    try {
+      final response = await ApiService.refreshDashboard(token: authToken);
+      
+      if (response['success']) {
+        setState(() {
+          _loginData = {
+            ...response,
+            'needsRefresh': false
+          };
+          _loadApiData();
+        });
+      } else {
+        await _loadStoredData();
+      }
+    } catch (e) {
+      await _loadStoredData();
+    }
+  }
 
   void _loadApiData() {
-    if (_loginData == null) return;
     
-    // getting the actual data-because the otp response puts the actual data in a data key so the need to extract it
+    if (_loginData == null) {
+      return;
+    }
+    
+    // getting the actual data
     Map<String, dynamic> actualData;
     
-    // Check if loginData has the 'data' from OTP 
     if (_loginData!['data'] != null) {
       actualData = _loginData!['data'] as Map<String, dynamic>;
-      print("Using nested data structure");
-      print("Actual data keys: ${actualData.keys}");
     } else {
       actualData = _loginData!;
-      print("Using direct data structure");
     }
-    // Updating balance from API
     final balance = actualData['balance'];
+    
     if (balance != null && balance['Balance'] != null) {
-      _accountBalance = balance['Balance'].toDouble();
-      print("Updated balance: $_accountBalance");
+      final newBalance = balance['Balance'].toDouble();
+      setState(() {
+        _accountBalance = newBalance;
+      });
+    } else {
     }
-    
-    // Updating transactions from API
     final statements = actualData['statement'] as List<dynamic>?;
-    if (statements != null) {
-      _apiTransactions = statements;
-      _updateMiniStatement();
-      print("Updated transactions: ${statements.length} items");
-    }
     
-    // Extract user name from the response
+    if (statements != null) {
+      setState(() {
+        _apiTransactions = statements;
+        _updateMiniStatement();
+      });
+    } else {
+    }
     if (actualData['Name'] != null) {
       setState(() {
         _apiUsername = actualData['Name'];
-        print("Updated username: $_apiUsername");
       });
+    } else {
+      print("No name found in data");
     }
   }
-    // handles pull to refresh functionality
+
+  Future<void> _loadStoredData() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final storedLoginData = prefs.getString('loginData');
+      
+      if (storedLoginData != null) {
+        setState(() {
+          _loginData = jsonDecode(storedLoginData);
+          _loadApiData();
+        });
+      }
+    } catch (e) {
+      print('Error loading stored data: $e');
+    }
+  }
+      // handles pull to refresh functionality
   Future<void> _refreshDashboard() async {
     try {
       // Extract auth token
@@ -104,21 +153,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
       if (_loginData != null && _loginData!['data'] != null) {
         final actualData = _loginData!['data'] as Map<String, dynamic>;
         authToken = actualData['Token'];
-        print("Using token for refresh: ${authToken?.substring(0, 20)}...");
       }
       
       if (authToken == null || authToken.isEmpty) {
-        print("No auth token available for refresh");
         return;
       }
-      
-      print("Starting dashboard refresh...");
       // Call the refresh API
       final response = await ApiService.refreshDashboard(token: authToken);
       
       if (response['success']) {
-        print("Dashboard refresh successful");
-        // Update the dashboard with new data
         setState(() {
           if (_loginData!['data'] != null) {
             _loginData!['data'] = response['data'];
@@ -128,19 +171,35 @@ class _DashboardScreenState extends State<DashboardScreen> {
           _loadApiData();
         });
         
-        print("Dashboard UI updated with fresh data");
-        
       } else {
-        print("Dashboard refresh failed: ${response['message']}");
         if (response['message'].toString().toLowerCase().contains('unauthorized') || 
-            response['message'].toString().toLowerCase().contains('token')) {
-          Navigator.pushReplacementNamed(context, '/login');
-        }
+          response['message'].toString().toLowerCase().contains('token') ||
+          response['message'].toString().toLowerCase().contains('expired')) {
+        _handleSessionExpired();
+      }
       }
     } catch (e) {
-      print("Dashboard refresh error: $e");
+      if (e.toString().contains('401') || e.toString().contains('Unauthorized')) {
+        _handleSessionExpired();
+      }
     }
   }
+  void _handleSessionExpired() {
+  ScaffoldMessenger.of(context).showSnackBar(
+    const SnackBar(
+      content: Text('Your session has expired. Please login again.'),
+      backgroundColor: Colors.red,
+      duration: Duration(seconds: 3),
+    ),
+  );
+  Future.delayed(const Duration(seconds: 1), () {
+    Navigator.pushNamedAndRemoveUntil(
+      context,
+      '/login',
+      (route) => false,
+    );
+  });
+}
 
   void _updateMiniStatement() {
     List<Transaction> apiTransactions = _apiTransactions.map((txn) {
@@ -225,18 +284,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
       _isBalanceVisible = !_isBalanceVisible;
     });
   }
-
   void _navigateToProfile() {
-    // Extract authentication token from login data
     String? authToken;
-    if (_loginData != null && _loginData!['data'] != null) {
-      final actualData = _loginData!['data'] as Map<String, dynamic>;
-      authToken = actualData['Token'] ?? actualData['token'] ?? actualData['accessToken'];
-      print("Extracted auth token for profile: ${authToken?.substring(0, 10)}...");
-    }
+    Map<String, dynamic>? loginData;
     
-    if (authToken == null || authToken.isEmpty) {
-      print("Warning: No auth token available for profile navigation");
+    if (_loginData != null) {
+      if (_loginData!['data'] != null) {
+        final actualData = _loginData!['data'] as Map<String, dynamic>;
+        authToken = actualData['Token'] ?? actualData['token'] ?? actualData['accessToken'];
+        loginData = _loginData;
+      } else {
+        authToken = _loginData!['Token'] ?? _loginData!['token'] ?? _loginData!['accessToken'];
+        loginData = _loginData;
+      }
     }
     
     Navigator.push(
@@ -248,6 +308,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           profileImageBytes: widget.profileImageBytes,
           profileImageFile: widget.profileImageFile,
           authToken: authToken,
+          loginData: loginData,
         ),
       ),
     );
@@ -264,12 +325,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
     void _handleDeposit() {
-  // getting the authtoken from whats shown on the dashboard
     String? authToken;
      if (_loginData != null && _loginData!['data'] != null) {
         final actualData = _loginData!['data'] as Map<String, dynamic>;
         authToken = actualData['Token']; 
-        print("Extracted token: ${authToken?.substring(0, 20)}..."); 
       }
     if (authToken == null || authToken.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -286,11 +345,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
         return DepositDialog(
           authToken: authToken!,
           onDepositSuccess: (double amount, String phoneNumber) {
-            // Updates the account balance 
             setState(() {
               _accountBalance += amount;
-              
-              // Add the new transaction to the mini statement
               _miniStatement.insert(0, Transaction(
                 date: DateTime.now(),
                 description: "Mobile Deposit",
@@ -329,7 +385,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     if (_loginData != null && _loginData!['data'] != null) {
       final actualData = _loginData!['data'] as Map<String, dynamic>;
       authToken = actualData['Token']; 
-      print("Extracted token for withdrawal: ${authToken?.substring(0, 20)}..."); 
     }
     if (authToken == null || authToken.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -348,7 +403,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
           currentBalance: _accountBalance,
           authToken: authToken!,
           onWithdrawSuccess: (double amount, String phoneNumber) {
-            // Updates the account balance
             setState(() {
               _accountBalance -= amount;
               

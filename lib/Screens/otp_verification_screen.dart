@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../Services/api_service.dart';
+import 'dart:convert';
 import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
@@ -11,25 +13,29 @@ class OTPVerificationScreen extends StatefulWidget {
   final Uint8List? profileImageBytes;
   final File? profileImageFile;
   final Map<String, dynamic>? loginData;
+  final Map<String, dynamic>? arguments;
   final String userId;
-  
+
   const OTPVerificationScreen({
     super.key,
     required this.email,
     required this.mobileNumber,
     this.profileImageBytes,
     this.profileImageFile,
-    this.loginData, 
+    this.loginData,
     required this.userId,
+    this.arguments,
   });
-  
+
   @override
-  _OTPVerificationScreenState createState() => _OTPVerificationScreenState();
+  State<OTPVerificationScreen> createState() => _OTPVerificationScreenState();
 }
 
 class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
-  final List<TextEditingController> _otpControllers = List.generate(6, (index) => TextEditingController());
-  final List<FocusNode> _focusNodes = List.generate(6, (index) => FocusNode());
+  final List<TextEditingController> _otpControllers =
+      List.generate(6, (_) => TextEditingController());
+  final List<FocusNode> _focusNodes = List.generate(6, (_) => FocusNode());
+
   bool _isLoading = false;
   bool _isResending = false;
   int _resendTimer = 60;
@@ -43,10 +49,10 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
 
   @override
   void dispose() {
-    for (var controller in _otpControllers) {
+    for (final controller in _otpControllers) {
       controller.dispose();
     }
-    for (var focusNode in _focusNodes) {
+    for (final focusNode in _focusNodes) {
       focusNode.dispose();
     }
     _timer?.cancel();
@@ -56,23 +62,22 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
   void _startResendTimer() {
     _resendTimer = 60;
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      setState(() {
-        if (_resendTimer > 0) {
-          _resendTimer--;
-        } else {
-          timer.cancel();
-        }
-      });
+      if (mounted) {
+        setState(() {
+          if (_resendTimer > 0) {
+            _resendTimer--;
+          } else {
+            timer.cancel();
+          }
+        });
+      }
     });
   }
 
-  String _getOTPCode() {
-    return _otpControllers.map((controller) => controller.text).join();
-  }
+  String _getOTPCode() =>
+      _otpControllers.map((controller) => controller.text).join();
 
-  bool _isOTPComplete() {
-    return _getOTPCode().length == 6;
-  }
+  bool _isOTPComplete() => _getOTPCode().length == 6;
 
   void _onOTPChanged(String value, int index) {
     if (value.isNotEmpty && index < 5) {
@@ -84,105 +89,125 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
       _verifyOTP();
     }
   }
+
   Future<void> _verifyOTP() async {
     if (!_isOTPComplete()) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please enter complete OTP'),
-          backgroundColor: Colors.orange,
-        ),
-      );
+      _showSnackBar('Please enter complete OTP', Colors.orange);
       return;
     }
 
-    setState(() {
-      _isLoading = true;
-    });
+    setState(() => _isLoading = true);
 
     try {
-      String otpCode = _getOTPCode();
+      final otpCode = _getOTPCode();
       final result = await ApiService.verifyOTP(
         userId: widget.userId,
         otpCode: otpCode,
       );
-      
+
+      print("=== OTP VERIFICATION RESPONSE ===");
+      print("Full result: $result");
+      print("Result data: ${result['data']}");
+      print("==================================");
+
       if (result['success'] == true) {
-        // extracting token from response so as to be used for the deposit/withdraw/change PIN later
-        String? authToken = result['data']?['token'] ?? result['data']?['accessToken'] ?? result['data']?['Token'];
-        // Extract and check if first-time user
-        bool isFirstTimeUser = result['data']?['isFirstTimeUser'] ?? 
-                              result['data']?['IsFirstTimeUser'] ?? 
-                              result['data']?['firstTimeUser'] ?? 
-                              false;
-        
-        print("First time user: $isFirstTimeUser");
-        print("Auth token extracted: ${authToken?.substring(0, 10)}...");
-        
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('OTP verified successfully!'),
-            backgroundColor: Colors.green,
-          ),
-        );
+        final authToken = result['data']?['Token'] ??
+            result['data']?['token'] ??
+            result['data']?['accessToken'] ??
+            result['token'] ??
+            result['accessToken'];
+
+        final args =
+            ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+
+        final cameFromRegistration = args?['fromRegistration'] == true;
+        final isFirstTimeUser = (result['data']?['isFirstTimeUser'] ??
+                result['data']?['IsFirstTimeUser'] ??
+                result['data']?['firstTimeUser'] ??
+                false) ||
+            cameFromRegistration;
+
+        // For existing users, we need to structure the data properly for the dashboard
+        Map<String, dynamic> completeLoginData;
         
         if (isFirstTimeUser) {
-          // Navigate to change PIN screen (mandatory for first-time users)
-          print("Navigating to change PIN screen (first time user)");
-          Navigator.pushNamedAndRemoveUntil(
-            context, 
-            '/change-pin', 
-            (route) => false,
-            arguments: {
+          // For first-time users, we'll navigate to change PIN
+          completeLoginData = {
+            'data': result['data'] ?? result,
+            'success': true,
+            'message': result['message'] ?? 'OTP verified successfully',
+          };
+        } else {
+          // For existing users, structure the data to match what dashboard expects
+          completeLoginData = {
+            'data': result['data'] ?? result,
+            'success': true,
+            'message': result['message'] ?? 'Login successful',
+            'needsRefresh': false,
+          };
+          
+          print("=== STRUCTURED LOGIN DATA FOR DASHBOARD ===");
+          print("Complete login data: $completeLoginData");
+          print("Data portion: ${completeLoginData['data']}");
+          print("==========================================");
+        }
+
+        // Storing data locally
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('loginData', jsonEncode(completeLoginData));
+        await prefs.setString('authToken', authToken ?? '');
+
+        _showSnackBar('OTP verified successfully!', Colors.green);
+        if (isFirstTimeUser) {
+          _navigateTo(
+            '/change-pin',
+            {
               'authToken': authToken ?? '',
               'isFirstTime': true,
-              'username': widget.loginData?['Name'] ?? 'User',
+              'username':
+                  result['data']?['Name'] ?? args?['fullName'] ?? 'User',
               'email': widget.email,
               'profileImageBytes': widget.profileImageBytes,
               'profileImageFile': widget.profileImageFile,
+              'loginData': completeLoginData,
+              'useStoredData': true,
             },
           );
         } else {
-          // Navigate directly to dashboard for existing users
-          print("Navigating to dashboard (existing user)");
-          Navigator.pushNamedAndRemoveUntil(
-            context, 
-            '/dashboard', 
-            (route) => false,
-            arguments: {
-              'loginData': result,
+          // For existing users, pass the complete data to dashboard
+          _navigateTo(
+            '/dashboard',
+            {
+              'loginData': completeLoginData, // This contains all the fresh data from OTP verification
               'authToken': authToken,
+              'username': result['data']?['Name'] ?? args?['fullName'] ?? 'User',
               'mobileNumber': widget.mobileNumber,
               'email': widget.email,
               'profileImageBytes': widget.profileImageBytes,
               'profileImageFile': widget.profileImageFile,
+              'useStoredData': false,
             },
           );
         }
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(result['message'] ?? 'Invalid OTP. Please try again.'),
-            backgroundColor: Colors.red,
-          ),
+        _showSnackBar(
+          result['message'] ?? 'Invalid OTP. Please try again.',
+          Colors.red,
         );
         _clearOTP();
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Verification failed: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      print("OTP verification error: $e");
+      _showSnackBar('Verification failed: $e', Colors.red);
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
   void _clearOTP() {
-    for (var controller in _otpControllers) {
+    for (final controller in _otpControllers) {
       controller.clear();
     }
     _focusNodes[0].requestFocus();
@@ -191,36 +216,44 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
   Future<void> _resendOTP() async {
     if (_resendTimer > 0) return;
 
-    setState(() {
-      _isResending = true;
-    });
+    setState(() => _isResending = true);
 
     try {
-      // Simulate API call to resend OTP
       await Future.delayed(const Duration(seconds: 1));
-      
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('OTP resent to ${widget.email}'),
-          backgroundColor: Colors.green,
-        ),
-      );
+
+      _showSnackBar('OTP resent to ${widget.email}', Colors.green);
       _startResendTimer();
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to resend OTP: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      _showSnackBar('Failed to resend OTP: $e', Colors.red);
     } finally {
-      setState(() {
-        _isResending = false;
-      });
+      if (mounted) {
+        setState(() => _isResending = false);
+      }
     }
   }
+
+  void _navigateTo(String route, Map<String, dynamic> arguments) {
+    Navigator.pushNamedAndRemoveUntil(
+      context,
+      route,
+      (route) => false,
+      arguments: arguments,
+    );
+  }
+
+  void _showSnackBar(String message, Color bgColor) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: bgColor,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final height = MediaQuery.of(context).size.height;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Verify Login OTP'),
@@ -232,41 +265,26 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
           padding: const EdgeInsets.all(24),
           child: ConstrainedBox(
             constraints: BoxConstraints(
-              minHeight: MediaQuery.of(context).size.height - 
-                        MediaQuery.of(context).padding.top - 
-                        kToolbarHeight - 48,
+              minHeight:
+                  height - MediaQuery.of(context).padding.top - kToolbarHeight - 48,
             ),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                SizedBox(height: MediaQuery.of(context).size.height * 0.03),
-                
-                const Icon(
-                  Icons.mark_email_read,
-                  size: 80,
-                  color: Colors.blue,
-                ),
-                SizedBox(height: MediaQuery.of(context).size.height * 0.025),
-                
+                SizedBox(height: height * 0.03),
+                const Icon(Icons.mark_email_read, size: 80, color: Colors.blue),
+                SizedBox(height: height * 0.025),
                 const Text(
                   'Enter Verification Code',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 16),
-                
                 Text(
                   'We sent a 6-digit code to\n${widget.mobileNumber}',
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    color: Colors.grey,
-                  ),
+                  style: const TextStyle(fontSize: 16, color: Colors.grey),
                 ),
-                SizedBox(height: MediaQuery.of(context).size.height * 0.04),
-                
+                SizedBox(height: height * 0.04),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: List.generate(6, (index) {
@@ -280,9 +298,7 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
                         keyboardType: TextInputType.number,
                         maxLength: 1,
                         style: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        ),
+                            fontSize: 20, fontWeight: FontWeight.bold),
                         inputFormatters: [
                           FilteringTextInputFormatter.digitsOnly,
                         ],
@@ -304,8 +320,7 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
                     );
                   }),
                 ),
-                SizedBox(height: MediaQuery.of(context).size.height * 0.04),
-                
+                SizedBox(height: height * 0.04),
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
@@ -324,48 +339,46 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
                                 height: 20,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                  valueColor:
+                                      AlwaysStoppedAnimation<Color>(Colors.white),
                                 ),
                               ),
                               SizedBox(width: 12),
                               Text('Verifying...'),
                             ],
                           )
-                        : const Text(
-                            'Verify Account',
-                            style: TextStyle(fontSize: 16),
-                          ),
+                        : const Text('Verify Account',
+                            style: TextStyle(fontSize: 16)),
                   ),
                 ),
                 const SizedBox(height: 24),
-                
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     const Text("Didn't receive the code? "),
                     GestureDetector(
-                      onTap: _resendTimer == 0 && !_isResending ? _resendOTP : null,
+                      onTap:
+                          _resendTimer == 0 && !_isResending ? _resendOTP : null,
                       child: Text(
-                        _resendTimer > 0 
-                          ? 'Resend in ${_resendTimer}s'
-                          : _isResending 
-                            ? 'Sending...'
-                            : 'Resend OTP',
+                        _resendTimer > 0
+                            ? 'Resend in ${_resendTimer}s'
+                            : _isResending
+                                ? 'Sending...'
+                                : 'Resend OTP',
                         style: TextStyle(
-                          color: _resendTimer == 0 && !_isResending 
-                            ? Theme.of(context).primaryColor 
-                            : Colors.grey,
+                          color: _resendTimer == 0 && !_isResending
+                              ? Theme.of(context).primaryColor
+                              : Colors.grey,
                           fontWeight: FontWeight.bold,
-                          decoration: _resendTimer == 0 && !_isResending 
-                            ? TextDecoration.underline 
-                            : null,
+                          decoration: _resendTimer == 0 && !_isResending
+                              ? TextDecoration.underline
+                              : null,
                         ),
                       ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 20),
-                
                 TextButton(
                   onPressed: _clearOTP,
                   child: const Text('Clear'),

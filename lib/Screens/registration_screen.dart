@@ -412,6 +412,7 @@ Future<void> _pickSignature() async {
             'fullName': _fullNameController.text,
             'profileImageBytes': _selfieImageBytes,
             'profileImageFile': _selfieImage,
+            'fromRegistration': true,
           },
         );
       } else {
@@ -423,7 +424,6 @@ Future<void> _pickSignature() async {
         );
       }
     } catch (e) {
-      // Handle network/connection errors
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Registration failed: $e'),

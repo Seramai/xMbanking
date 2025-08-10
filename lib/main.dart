@@ -77,15 +77,16 @@ class MyApp extends StatelessWidget {
             profileImageBytes: args?['profileImageBytes'],
           );
         },
-          '/change-pin': (context) {
-            final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>?;
-            return ChangePinScreen(
-              authToken: args?['authToken'] ?? '',
-              isFirstTime: args?['isFirstTime'] ?? false,
-              username: args?['username'],
-              email: args?['email'],
-            );
-          },
+        '/change-pin': (context) {
+          final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>?;
+          return ChangePinScreen(
+            authToken: args?['authToken'] ?? '',
+            isFirstTime: args?['isFirstTime'] ?? false,
+            username: args?['username'],
+            email: args?['email'],
+            loginData: args?['loginData'],
+          );
+        },
         '/notifications': (context) => const NotificationsScreen(),
       },
       initialRoute: '/',

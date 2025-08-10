@@ -345,7 +345,6 @@ class ApiService {
     String? remarks,
   }) async {
     try {
-      // Clean up remarks 
       String cleanedRemarks = remarks?.trim().replaceAll('\n', ' ') ?? "Deposit to wallet";
       
       final requestBody = {
@@ -358,8 +357,6 @@ class ApiService {
       print("Deposit URL: ${ApiConfig.depositUrl}");
       print("Request headers: ${ApiConfig.getTransactionHeaders(token)}"); 
       print("Request body: ${jsonEncode(requestBody)}");
-      
-      // Add connection check
       try {
         final connectivity = await Connectivity().checkConnectivity();
         print("Network connectivity: $connectivity");
