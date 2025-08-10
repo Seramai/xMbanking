@@ -84,7 +84,6 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
       _verifyOTP();
     }
   }
-
   Future<void> _verifyOTP() async {
     if (!_isOTPComplete()) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -102,36 +101,63 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
 
     try {
       String otpCode = _getOTPCode();
-      
-      // Calling the OTP verification API
       final result = await ApiService.verifyOTP(
         userId: widget.userId,
         otpCode: otpCode,
       );
       
       if (result['success'] == true) {
-        // extracting token from response so as to be used for the depoit/withdraw later
-        String? authToken = result['data']?['token']?? result['data']?['accessToken'];
+        // extracting token from response so as to be used for the deposit/withdraw/change PIN later
+        String? authToken = result['data']?['token'] ?? result['data']?['accessToken'] ?? result['data']?['Token'];
+        // Extract and check if first-time user
+        bool isFirstTimeUser = result['data']?['isFirstTimeUser'] ?? 
+                              result['data']?['IsFirstTimeUser'] ?? 
+                              result['data']?['firstTimeUser'] ?? 
+                              false;
+        
+        print("First time user: $isFirstTimeUser");
+        print("Auth token extracted: ${authToken?.substring(0, 10)}...");
+        
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('OTP verified successfully!'),
             backgroundColor: Colors.green,
           ),
         );
-        Navigator.pushNamedAndRemoveUntil(
-          context, 
-          '/dashboard', 
-          (route) => false,
-          arguments: {
-            // result is the full otp verification response
-            'loginData': result,
-            'authToken': authToken,
-            'mobileNumber': widget.mobileNumber,
-            'email': widget.email,
-            'profileImageBytes': widget.profileImageBytes,
-            'profileImageFile': widget.profileImageFile,
-          },
-        );
+        
+        if (isFirstTimeUser) {
+          // Navigate to change PIN screen (mandatory for first-time users)
+          print("Navigating to change PIN screen (first time user)");
+          Navigator.pushNamedAndRemoveUntil(
+            context, 
+            '/change-pin', 
+            (route) => false,
+            arguments: {
+              'authToken': authToken ?? '',
+              'isFirstTime': true,
+              'username': widget.loginData?['Name'] ?? 'User',
+              'email': widget.email,
+              'profileImageBytes': widget.profileImageBytes,
+              'profileImageFile': widget.profileImageFile,
+            },
+          );
+        } else {
+          // Navigate directly to dashboard for existing users
+          print("Navigating to dashboard (existing user)");
+          Navigator.pushNamedAndRemoveUntil(
+            context, 
+            '/dashboard', 
+            (route) => false,
+            arguments: {
+              'loginData': result,
+              'authToken': authToken,
+              'mobileNumber': widget.mobileNumber,
+              'email': widget.email,
+              'profileImageBytes': widget.profileImageBytes,
+              'profileImageFile': widget.profileImageFile,
+            },
+          );
+        }
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

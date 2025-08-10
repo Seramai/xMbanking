@@ -83,6 +83,14 @@ class ApiConfig{
     }
     return baseUrl + endpoint;
   }
+  // retrieves the chnage pin url
+  static String get changePinUrl{
+    final endpoint = dotenv.env['CHANGE_PIN_URL'];
+    if(endpoint == null || endpoint.isEmpty){
+      throw Exception("CHNAGE PIN URL not found in the env file");
+    }
+    return baseUrl + endpoint;
+  }
   // this is the deposit/withdraw header only
   static Map<String, String> getTransactionHeaders(String token){
     return{

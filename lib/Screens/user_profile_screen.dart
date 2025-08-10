@@ -9,6 +9,7 @@ class UserProfileScreen extends StatelessWidget {
   // Image data properties for profile picture
   final File? profileImageFile;
   final Uint8List? profileImageBytes;
+  final String? authToken; 
   
   const UserProfileScreen({
     super.key,
@@ -16,6 +17,7 @@ class UserProfileScreen extends StatelessWidget {
     required this.email,
     this.profileImageFile,  
     this.profileImageBytes,
+    this.authToken, 
   });
 
   void _logout(BuildContext context) {
@@ -232,9 +234,29 @@ class UserProfileScreen extends StatelessWidget {
                               width: double.infinity,
                               child: OutlinedButton.icon(
                                 onPressed: () {
+                                  // Check if auth token is available
+                                  if (authToken == null || authToken!.isEmpty) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('Authentication error. Please login again to change PIN.'),
+                                        backgroundColor: Colors.red,
+                                      ),
+                                    );
+                                    return;
+                                  }
+                                  Navigator.pushNamed(
+                                    context,
+                                    '/change-pin',
+                                    arguments: {
+                                      'authToken': authToken!,
+                                      'isFirstTime': false,
+                                      'username': username,
+                                      'email': email,
+                                    },
+                                  );
                                 },
                                 icon: const Icon(Icons.lock),
-                                label: const Text('Change Password'),
+                                label: const Text('Change PIN'),
                                 style: OutlinedButton.styleFrom(
                                   padding: const EdgeInsets.symmetric(vertical: 16),
                                   side: BorderSide(

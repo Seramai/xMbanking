@@ -449,6 +449,118 @@ class ApiService {
       };
     }
   }
+  // handles the change PIN functionality
+  static Future<Map<String, dynamic>> changePin({
+    required String token,
+    required String currentPin,
+    required String newPin,
+    required String confirmNewPin,
+  }) async {
+    try {
+      final requestBody = {
+        "CurrentPin": currentPin,
+        "NewPin": newPin,
+        "ConfirmNewPin": confirmNewPin,
+      };
+      
+      print("Processing PIN change");
+      print("Change PIN URL: ${ApiConfig.changePinUrl}");
+      print("Request headers: ${ApiConfig.getTransactionHeaders(token)}"); 
+      print("Request body: ${jsonEncode(requestBody)}");
+      try {
+        final connectivity = await Connectivity().checkConnectivity();
+        print("Network connectivity: $connectivity");
+        if (connectivity == ConnectivityResult.none) {
+          return {
+            'success': false,
+            'message': 'No internet connection - please check your network',
+          };
+        }
+      } catch (e) {
+        print("Connectivity check failed: $e");
+      }
+
+      final response = await http.post(
+        Uri.parse(ApiConfig.changePinUrl),
+        headers: ApiConfig.getTransactionHeaders(token),
+        body: jsonEncode(requestBody),
+      ).timeout(
+        const Duration(seconds: 30),
+        onTimeout: () {
+          throw Exception('Change PIN request timeout - please check your internet connection');
+        },
+      );
+      
+      print("Change PIN response status: ${response.statusCode}");
+      print("Change PIN response body: ${response.body}");
+      
+      if (response.statusCode == 200 || response.statusCode == 201 || response.statusCode == 202) {
+        final responseData = jsonDecode(response.body);
+        return {
+          'success': true,
+          'message': 'PIN changed successfully',
+          'data': responseData,
+        };
+      } else if (response.statusCode == 400) {
+        final errorData = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': errorData['message'] ?? 'PIN change failed. Please check your current PIN.',
+          'errors': errorData,
+        };
+      } else if (response.statusCode == 401) {
+        return {
+          'success': false,
+          'message': 'Unauthorized - please login again',
+        };
+      } else if (response.statusCode == 403) {
+        return {
+          'success': false,
+          'message': 'Invalid current PIN. Please try again.',
+        };
+      } else {
+        return {
+          'success': false,
+          'message': 'PIN change failed: ${response.statusCode}',
+        };
+      }
+    } on SocketException catch (e) {
+      print("Socket Exception: $e");
+      return {
+        'success': false,
+        'message': 'Network error - please check your internet connection',
+      };
+    } on http.ClientException catch (e) {
+      print("HTTP Client Exception: $e");
+      return {
+        'success': false,
+        'message': 'Connection failed - please try again',
+      };
+    } on FormatException catch (e) {
+      print("Format Exception: $e");
+      return {
+        'success': false,
+        'message': 'Invalid server response format',
+      };
+    } catch (e) {
+      print("Change PIN error: $e");
+      if (e.toString().contains('timeout')) {
+        return {
+          'success': false,
+          'message': 'PIN change request timeout - please check your internet connection',
+        };
+      } else if (e.toString().contains('Invalid status code 0')) {
+        return {
+          'success': false,
+          'message': 'Connection failed - please check your network and try again',
+        };
+      }
+      return {
+        'success': false,
+        'message': 'PIN change failed: ${e.toString()}',
+      };
+    }
+  }
     // handles the withdraw functionality
   static Future<Map<String, dynamic>> processWithdraw({
     required String token,

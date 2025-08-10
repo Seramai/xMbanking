@@ -6,6 +6,7 @@ import 'Screens/otp_verification_screen.dart';
 import 'Screens/dashboard_screen.dart';
 import 'Screens/user_profile_screen.dart';
 import 'Screens/notifications_screen.dart';
+import 'Screens/change_pin_screen.dart';
 import 'Config/api_config.dart';
 
 
@@ -76,6 +77,15 @@ class MyApp extends StatelessWidget {
             profileImageBytes: args?['profileImageBytes'],
           );
         },
+          '/change-pin': (context) {
+            final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>?;
+            return ChangePinScreen(
+              authToken: args?['authToken'] ?? '',
+              isFirstTime: args?['isFirstTime'] ?? false,
+              username: args?['username'],
+              email: args?['email'],
+            );
+          },
         '/notifications': (context) => const NotificationsScreen(),
       },
       initialRoute: '/',

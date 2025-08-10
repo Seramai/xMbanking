@@ -181,6 +181,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   void _navigateToProfile() {
+    // Extract authentication token from login data
+    String? authToken;
+    if (_loginData != null && _loginData!['data'] != null) {
+      final actualData = _loginData!['data'] as Map<String, dynamic>;
+      authToken = actualData['Token'] ?? actualData['token'] ?? actualData['accessToken'];
+      print("Extracted auth token for profile: ${authToken?.substring(0, 10)}...");
+    }
+    
+    if (authToken == null || authToken.isEmpty) {
+      print("Warning: No auth token available for profile navigation");
+    }
+    
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -189,10 +201,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
           email: widget.email,
           profileImageBytes: widget.profileImageBytes,
           profileImageFile: widget.profileImageFile,
+          authToken: authToken,
         ),
       ),
     );
   }
+
 
   void _navigateToNotifications() {
     Navigator.push(
