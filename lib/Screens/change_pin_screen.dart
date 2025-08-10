@@ -4,6 +4,7 @@ import '../Services/api_service.dart';
 
 class ChangePinScreen extends StatefulWidget {
   final String authToken;
+  // helps determine if its a fisrt time user or an existing one
   final bool isFirstTime;
   final String? username;
   final String? email;

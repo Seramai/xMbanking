@@ -561,6 +561,117 @@ class ApiService {
       };
     }
   }
+  // handles dashboard refresh functionality
+  static Future<Map<String, dynamic>> refreshDashboard({
+    required String token,
+  }) async {
+    try {
+      print("Refreshing dashboard data with token: ${token.substring(0, 20)}...");
+      print("Dashboard refresh URL: ${ApiConfig.dashboardReloadUrl}");
+      try {
+        final connectivity = await Connectivity().checkConnectivity();
+        print("Network connectivity: $connectivity");
+        if (connectivity == ConnectivityResult.none) {
+          return {
+            'success': false,
+            'message': 'No internet connection - please check your network',
+          };
+        }
+      } catch (e) {
+        print("Connectivity check failed: $e");
+      }
+      final response = await http.get(
+        Uri.parse(ApiConfig.dashboardReloadUrl),
+        headers: ApiConfig.getTransactionHeaders(token),
+      ).timeout(
+        const Duration(seconds: 30),
+        onTimeout: () {
+          throw Exception('Dashboard refresh timeout - please check your internet connection');
+        },
+      );
+      
+      print("Dashboard refresh response status: ${response.statusCode}");
+      print("Dashboard refresh response body: ${response.body}");
+      
+      if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body);
+        return {
+          'success': true,
+          'message': 'Dashboard refreshed successfully',
+          'data': responseData,
+          'tokenValid': true,
+        };
+      } else if (response.statusCode == 401) {
+        return {
+          'success': false,
+          'message': 'Your session has expired. Please login again.',
+          'tokenValid': false, 
+        };
+      } 
+      else if (response.statusCode == 403) {
+        return {
+          'success': false,
+          'message': 'Access denied. Please login again.',
+          'tokenValid': false,
+        };
+      } 
+      else if (response.statusCode == 500) {
+        return {
+          'success': false,
+          'message': 'Server error. Please try again in a moment.',
+          'tokenValid': true,
+        };
+      } else {
+        return {
+          'success': false,
+          'message': 'Refresh failed. Please try again.',
+          'tokenValid': true,
+        };
+      }
+    } 
+    on SocketException catch (e) {
+      print("Socket Exception: $e");
+      return {
+        'success': false,
+        'message': 'Network error - please check your internet connection',
+        'tokenValid': true, 
+      };
+    } on http.ClientException catch (e) {
+      print("HTTP Client Exception: $e");
+      return {
+        'success': false,
+        'message': 'Connection failed - please try again',
+        'tokenValid': true,
+      };
+    } on FormatException catch (e) {
+      print("Format Exception: $e");
+      return {
+        'success': false,
+        'message': 'Invalid server response format',
+        'tokenValid': true,
+      };
+    } catch (e) {
+      print("Dashboard refresh error: $e");
+      if (e.toString().contains('timeout')) {
+        return {
+          'success': false,
+          'message': 'Request timeout - please check your internet connection',
+          'tokenValid': true,
+        };
+      } else if (e.toString().contains('Invalid status code 0')) {
+        return {
+          'success': false,
+          'message': 'Connection failed - please check your network and try again',
+          'tokenValid': true,
+        };
+      }
+      return {
+        'success': false,
+        'message': 'Refresh failed - please try again',
+        'tokenValid': true,
+      };
+    }
+  }
     // handles the withdraw functionality
   static Future<Map<String, dynamic>> processWithdraw({
     required String token,

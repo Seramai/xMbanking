@@ -91,6 +91,15 @@ class ApiConfig{
     }
     return baseUrl + endpoint;
   }
+  // Retrieves the refresh url
+  static String get dashboardReloadUrl{
+    final endpoint = dotenv.env['DASHBOARD_RELOAD_URL'];
+    if(endpoint == null || endpoint.isEmpty){
+      throw Exception("DASHBOARD_RELOAD_URL not found in the env file");
+    }
+    return baseUrl + endpoint;
+  }
+
   // this is the deposit/withdraw header only
   static Map<String, String> getTransactionHeaders(String token){
     return{

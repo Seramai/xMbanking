@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'user_profile_screen.dart';
 import 'notifications_screen.dart';
+import '../services/api_service.dart';
 import 'dart:io';
 import 'dart:typed_data';
 import 'deposit_dialog.dart';
@@ -93,6 +94,51 @@ class _DashboardScreenState extends State<DashboardScreen> {
         _apiUsername = actualData['Name'];
         print("Updated username: $_apiUsername");
       });
+    }
+  }
+    // handles pull to refresh functionality
+  Future<void> _refreshDashboard() async {
+    try {
+      // Extract auth token
+      String? authToken;
+      if (_loginData != null && _loginData!['data'] != null) {
+        final actualData = _loginData!['data'] as Map<String, dynamic>;
+        authToken = actualData['Token'];
+        print("Using token for refresh: ${authToken?.substring(0, 20)}...");
+      }
+      
+      if (authToken == null || authToken.isEmpty) {
+        print("No auth token available for refresh");
+        return;
+      }
+      
+      print("Starting dashboard refresh...");
+      // Call the refresh API
+      final response = await ApiService.refreshDashboard(token: authToken);
+      
+      if (response['success']) {
+        print("Dashboard refresh successful");
+        // Update the dashboard with new data
+        setState(() {
+          if (_loginData!['data'] != null) {
+            _loginData!['data'] = response['data'];
+          } else {
+            _loginData = response['data'];
+          }
+          _loadApiData();
+        });
+        
+        print("Dashboard UI updated with fresh data");
+        
+      } else {
+        print("Dashboard refresh failed: ${response['message']}");
+        if (response['message'].toString().toLowerCase().contains('unauthorized') || 
+            response['message'].toString().toLowerCase().contains('token')) {
+          Navigator.pushReplacementNamed(context, '/login');
+        }
+      }
+    } catch (e) {
+      print("Dashboard refresh error: $e");
     }
   }
 
@@ -367,222 +413,114 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F5),
-      body: SafeArea(
-        child: Column(
-          children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                     Color(0xFF0D1B4A),  
-                     Color(0xFF1A237E), 
-                  ],
-                ),
-                borderRadius: const BorderRadius.only(
-                  bottomLeft: Radius.circular(24),
-                  bottomRight: Radius.circular(24),
-                ),
-              ),
-              child: Column(
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      GestureDetector(
-                        onTap: _navigateToProfile,
-                        child: Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.2),
-                            borderRadius: BorderRadius.circular(30),
-                          ),
-                          child: ClipOval(
-                            child: SizedBox(
-                              width: 28,
-                              height: 28,
-                              child: _buildProfileImage(),
-                            ),
-                          ),
-                        ),
-                      ),
-                      Text(
-                        'Welcome, ${_apiUsername ?? widget.username}',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      GestureDetector(
-                        onTap: _navigateToNotifications,
-                        child: Stack(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.2),
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: const Icon(
-                                Icons.notifications_outlined,
-                                color: Colors.white,
-                                size: 24,
-                              ),
-                            ),
-                            if (_notificationCount > 0)
-                              Positioned(
-                                right: 0,
-                                top: 0,
-                                child: Container(
-                                  padding: const EdgeInsets.all(4),
-                                  decoration: const BoxDecoration(
-                                    color: Colors.red,
-                                    shape: BoxShape.circle,
-                                  ),
-                                  constraints: const BoxConstraints(
-                                    minWidth: 20,
-                                    minHeight: 20,
-                                  ),
-                                  child: Text(
-                                    '$_notificationCount',
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                    textAlign: TextAlign.center,
-                                  ),
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
+      body: RefreshIndicator(
+        onRefresh: _refreshDashboard,
+        color: Theme.of(context).primaryColor,
+        backgroundColor: Colors.white,
+        strokeWidth: 3.0,
+        child: SafeArea(
+          child: Column(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Color(0xFF0D1B4A),  
+                      Color(0xFF1A237E), 
                     ],
                   ),
-                  const SizedBox(height: 20),
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Text(
-                              'Account Balance',
-                              style: TextStyle(
-                                color: Colors.grey,
-                                fontSize: 14,
-                              ),
-                            ),
-                            GestureDetector(
-                              onTap: _toggleBalance,
-                              child: Icon(
-                                _isBalanceVisible
-                                    ? Icons.visibility_off
-                                    : Icons.visibility,
-                                color: Colors.grey,
-                                size: 20,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          _isBalanceVisible
-                              ? 'KES ${NumberFormat("#,##0.00").format(_accountBalance)}'
-                              : 'KES ••••••',
-                          style: TextStyle(
-                            fontSize: 28,
-                            fontWeight: FontWeight.bold,
-                            color: Theme.of(context).primaryColor,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          '$_numberOfAccounts linked accounts',
-                          style: TextStyle(
-                            color: Colors.grey[600],
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
-                    ),
+                  borderRadius: const BorderRadius.only(
+                    bottomLeft: Radius.circular(24),
+                    bottomRight: Radius.circular(24),
                   ),
-                ],
-              ),
-            ),
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(16),
+                ),
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Expanded(
-                          child: ElevatedButton.icon(
-                            onPressed: _handleDeposit,
-                            icon: const Icon(Icons.add_circle_outline),
-                            label: const Text('Deposit'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Theme.of(context).primaryColor,
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
+                        GestureDetector(
+                          onTap: _navigateToProfile,
+                          child: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(30),
+                            ),
+                            child: ClipOval(
+                              child: SizedBox(
+                                width: 28,
+                                height: 28,
+                                child: _buildProfileImage(),
                               ),
-                              elevation: 4,
                             ),
                           ),
                         ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: ElevatedButton.icon(
-                            onPressed: _handleWithdraw,
-                            icon: const Icon(Icons.remove_circle_outline),
-                            label: const Text('Withdraw'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.white,
-                              foregroundColor: Theme.of(context).primaryColor,
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                side: BorderSide(
-                                  color: Theme.of(context).primaryColor,
-                                  width: 2,
+                        Text(
+                          'Welcome, ${_apiUsername ?? widget.username}',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        GestureDetector(
+                          onTap: _navigateToNotifications,
+                          child: Stack(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.2),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: const Icon(
+                                  Icons.notifications_outlined,
+                                  color: Colors.white,
+                                  size: 24,
                                 ),
                               ),
-                              elevation: 4,
-                            ),
+                              if (_notificationCount > 0)
+                                Positioned(
+                                  right: 0,
+                                  top: 0,
+                                  child: Container(
+                                    padding: const EdgeInsets.all(4),
+                                    decoration: const BoxDecoration(
+                                      color: Colors.red,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    constraints: const BoxConstraints(
+                                      minWidth: 20,
+                                      minHeight: 20,
+                                    ),
+                                    child: Text(
+                                      '$_notificationCount',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ),
+                                ),
+                            ],
                           ),
                         ),
                       ],
                     ),
-                    
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 20),
                     Container(
                       width: double.infinity,
-                      padding: const EdgeInsets.all(16),
+                      padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
                         color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                        boxShadow: [ 
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
                           BoxShadow(
                             color: Colors.black.withOpacity(0.1),
                             blurRadius: 10,
@@ -590,226 +528,340 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           ),
                         ],
                       ),
-                      child: Row(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: Colors.green.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: const Icon(
-                              Icons.access_time,
-                              color: Colors.green,
-                              size: 20,
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text(
+                                'Account Balance',
+                                style: TextStyle(
+                                  color: Colors.grey,
+                                  fontSize: 14,
+                                ),
+                              ),
+                              GestureDetector(
+                                onTap: _toggleBalance,
+                                child: Icon(
+                                  _isBalanceVisible
+                                      ? Icons.visibility_off
+                                      : Icons.visibility,
+                                  color: Colors.grey,
+                                  size: 20,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            _isBalanceVisible
+                                ? 'KES ${NumberFormat("#,##0.00").format(_accountBalance)}'
+                                : 'KES ••••••',
+                            style: TextStyle(
+                              fontSize: 28,
+                              fontWeight: FontWeight.bold,
+                              color: Theme.of(context).primaryColor,
                             ),
                           ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text(
-                                  'Last Login',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 14,
-                                  ),
-                                ),
-                                Text(
-                                  _lastLoginTime,
-                                  style: TextStyle(
-                                    color: Colors.grey[600],
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ],
+                          const SizedBox(height: 12),
+                          Text(
+                            '$_numberOfAccounts linked accounts',
+                            style: TextStyle(
+                              color: Colors.grey[600],
+                              fontSize: 12,
                             ),
                           ),
                         ],
                       ),
                     ),
-                    
-                    const SizedBox(height: 24),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          'Recent Transactions',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        GestureDetector(
-                          onTap: _viewFullStatement,
-                          child: Text(
-                            'View All',
-                            style: TextStyle(
-                              color: Theme.of(context).primaryColor,
-                              fontWeight: FontWeight.bold,
+                  ],
+                ),
+              ),
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              onPressed: _handleDeposit,
+                              icon: const Icon(Icons.add_circle_outline),
+                              label: const Text('Deposit'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Theme.of(context).primaryColor,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                elevation: 4,
+                              ),
                             ),
                           ),
-                        ),
-                      ],
-                    ),
-                    ListView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      itemCount: _miniStatement.length,
-                      itemBuilder: (context, index) {
-                        final transaction = _miniStatement[index];
-                        return Card(
-                          margin: const EdgeInsets.only(bottom: 8),
-                          elevation: 2,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(12),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              onPressed: _handleWithdraw,
+                              icon: const Icon(Icons.remove_circle_outline),
+                              label: const Text('Withdraw'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.white,
+                                foregroundColor: Theme.of(context).primaryColor,
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  side: BorderSide(
+                                    color: Theme.of(context).primaryColor,
+                                    width: 2,
+                                  ),
+                                ),
+                                elevation: 4,
+                              ),
                             ),
-                            child: ListTile(
-                              contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 12,
+                          ),
+                        ],
+                      ),
+                      
+                      const SizedBox(height: 24),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [ 
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.1),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: Colors.green.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(8),
                               ),
-                              leading: Container(
-                                padding: const EdgeInsets.all(8),
-                                decoration: BoxDecoration(
-                                  color: transaction.type == TransactionType.credit
-                                      ? Colors.green.withOpacity(0.1)
-                                      : Colors.red.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Icon(
-                                  transaction.icon,
-                                  color: transaction.type == TransactionType.credit
-                                      ? Colors.green
-                                      : Colors.red,
-                                  size: 20,
-                                ),
+                              child: const Icon(
+                                Icons.access_time,
+                                color: Colors.green,
+                                size: 20,
                               ),
-                              title: Text(
-                                transaction.description,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 14,
-                                  color: Colors.black87,
-                                ),
-                              ),
-                              subtitle: Text(
-                                DateFormat('MMM dd, yyyy • HH:mm').format(transaction.date),
-                                style: TextStyle(
-                                  color: Colors.grey[600],
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                              trailing: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                crossAxisAlignment: CrossAxisAlignment.end,
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(
-                                    '${transaction.amount >= 0 ? '+' : ''}KES ${NumberFormat("#,##0.00").format(transaction.amount.abs())}',
+                                  const Text(
+                                    'Last Login',
                                     style: TextStyle(
-                                      color: transaction.type == TransactionType.credit
-                                          ? Colors.green
-                                          : Colors.red,
                                       fontWeight: FontWeight.bold,
                                       fontSize: 14,
                                     ),
                                   ),
-                                  const SizedBox(height: 2),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                    decoration: BoxDecoration(
-                                      color: transaction.type == TransactionType.credit
-                                          ? Colors.green.withOpacity(0.1)
-                                          : Colors.red.withOpacity(0.1),
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
-                                    child: Text(
-                                      transaction.type == TransactionType.credit ? 'Credit' : 'Debit',
-                                      style: TextStyle(
-                                        color: transaction.type == TransactionType.credit
-                                            ? Colors.green
-                                            : Colors.red,
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.w500,
-                                      ),
+                                  Text(
+                                    _lastLoginTime,
+                                    style: TextStyle(
+                                      color: Colors.grey[600],
+                                      fontSize: 12,
                                     ),
                                   ),
                                 ],
                               ),
                             ),
-                          ),
-                        );
-                      },
-                    ),
-                    
-                    const SizedBox(height: 24),
-                    const Text(
-                      'Quick Actions',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
+                          ],
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 16),
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.05),
-                            blurRadius: 8,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: Column(
+                      
+                      const SizedBox(height: 24),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Row(
-                            children: [
-                            ],
+                          const Text(
+                            'Recent Transactions',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
-                          const SizedBox(height: 16),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: _buildQuickActionItem(
-                                  icon: Icons.phone_android,
-                                  title: 'Mobile Money',
-                                  color: Color(0xFF1A237E).withOpacity(0.8),
-                                  onTap: () {},
-                                ),
+                          GestureDetector(
+                            onTap: _viewFullStatement,
+                            child: Text(
+                              'View All',
+                              style: TextStyle(
+                                color: Theme.of(context).primaryColor,
+                                fontWeight: FontWeight.bold,
                               ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: _buildQuickActionItem(
-                                  icon: Icons.history,
-                                  title: 'History',
-                                  color: Color(0xFF1A237E).withOpacity(0.8),
-                                  onTap: _viewFullStatement,
-                                ),
-                              ),
-                            ],
+                            ),
                           ),
                         ],
                       ),
-                    ),
-                    
-                    const SizedBox(height: 20),
-                  ],
+                      ListView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        itemCount: _miniStatement.length,
+                        itemBuilder: (context, index) {
+                          final transaction = _miniStatement[index];
+                          return Card(
+                            margin: const EdgeInsets.only(bottom: 8),
+                            elevation: 2,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: ListTile(
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 12,
+                                ),
+                                leading: Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: transaction.type == TransactionType.credit
+                                        ? Colors.green.withOpacity(0.1)
+                                        : Colors.red.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Icon(
+                                    transaction.icon,
+                                    color: transaction.type == TransactionType.credit
+                                        ? Colors.green
+                                        : Colors.red,
+                                    size: 20,
+                                  ),
+                                ),
+                                title: Text(
+                                  transaction.description,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 14,
+                                    color: Colors.black87,
+                                  ),
+                                ),
+                                subtitle: Text(
+                                  DateFormat('MMM dd, yyyy • HH:mm').format(transaction.date),
+                                  style: TextStyle(
+                                    color: Colors.grey[600],
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                trailing: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  children: [
+                                    Text(
+                                      '${transaction.amount >= 0 ? '+' : ''}KES ${NumberFormat("#,##0.00").format(transaction.amount.abs())}',
+                                      style: TextStyle(
+                                        color: transaction.type == TransactionType.credit
+                                            ? Colors.green
+                                            : Colors.red,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: transaction.type == TransactionType.credit
+                                            ? Colors.green.withOpacity(0.1)
+                                            : Colors.red.withOpacity(0.1),
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      child: Text(
+                                        transaction.type == TransactionType.credit ? 'Credit' : 'Debit',
+                                        style: TextStyle(
+                                          color: transaction.type == TransactionType.credit
+                                              ? Colors.green
+                                              : Colors.red,
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                      
+                      const SizedBox(height: 24),
+                      const Text(
+                        'Quick Actions',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.05),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          children: [
+                            Row(
+                              children: [
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: _buildQuickActionItem(
+                                    icon: Icons.phone_android,
+                                    title: 'Mobile Money',
+                                    color: Color(0xFF1A237E).withOpacity(0.8),
+                                    onTap: () {},
+                                  ),
+                                ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: _buildQuickActionItem(
+                                    icon: Icons.history,
+                                    title: 'History',
+                                    color: Color(0xFF1A237E).withOpacity(0.8),
+                                    onTap: _viewFullStatement,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                      
+                      const SizedBox(height: 20),
+                    ],
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
