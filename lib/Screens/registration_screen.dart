@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart'; 
 import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 import '../Services/api_service.dart';
 import 'dart:io';
 import 'dart:typed_data';
@@ -396,6 +398,13 @@ Future<void> _pickSignature() async {
       );
 
       if (result['success']) {
+        // Save registration data to cache before navigating
+        await _saveRegistrationDataToCache(
+          _emailController.text,
+          _selfieImageBytes ?? _selfieImage,
+          _fullNameController.text,
+        );
+        
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Registration successful! Please login to your account.'),
@@ -434,6 +443,25 @@ Future<void> _pickSignature() async {
       setState(() {
         _isLoading = false;
       });
+    }
+  }
+  Future<void> _saveRegistrationDataToCache(String email, dynamic imageData, String fullName) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('registration_email', email);
+      await prefs.setString('registration_fullName', fullName);
+      if (_selfieImageBytes != null) {
+        String base64Image = base64Encode(_selfieImageBytes!);
+        await prefs.setString('registration_profileImage_bytes', base64Image);
+        await prefs.remove('registration_profileImage_path');
+      } else if (_selfieImage != null) {
+        await prefs.setString('registration_profileImage_path', _selfieImage!.path);
+        await prefs.remove('registration_profileImage_bytes');
+      }
+      
+      print("Registration data saved to cache successfully");
+    } catch (e) {
+      print("Error saving registration data to cache: $e");
     }
   }
 

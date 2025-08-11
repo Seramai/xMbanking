@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'dart:io'; 
 import 'dart:typed_data';
-import 'package:flutter/foundation.dart'; 
+import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 
-
-class UserProfileScreen extends StatelessWidget {
+class UserProfileScreen extends StatefulWidget {
   final String username;
   final String email;
   // Image data properties for profile picture
@@ -22,6 +23,54 @@ class UserProfileScreen extends StatelessWidget {
     this.authToken, 
     this.loginData,
   });
+
+  @override
+  State<UserProfileScreen> createState() => _UserProfileScreenState();
+}
+
+class _UserProfileScreenState extends State<UserProfileScreen> {
+  Uint8List? _cachedImageBytes;
+  File? _cachedImageFile;
+  String? _cachedEmail;
+  String? _cachedUsername;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadRegistrationDataFromCache();
+  }
+
+  Future<void> _loadRegistrationDataFromCache() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      
+      String? cachedEmail = prefs.getString('registration_email');
+      String? cachedUsername = prefs.getString('registration_fullName');
+      String? cachedImageBytes = prefs.getString('registration_profileImage_bytes');
+      String? cachedImagePath = prefs.getString('registration_profileImage_path');
+      
+      setState(() {
+        _cachedEmail = cachedEmail;
+        _cachedUsername = cachedUsername;
+        
+        if (cachedImageBytes != null) {
+          try {
+            _cachedImageBytes = base64Decode(cachedImageBytes);
+          } catch (e) {
+            print("Error decoding cached image bytes in profile: $e");
+          }
+        }
+        
+        if (cachedImagePath != null && !kIsWeb) {
+          _cachedImageFile = File(cachedImagePath);
+        }
+      });
+      
+      print("Profile cached data loaded - Email: $cachedEmail, Username: $cachedUsername, HasImage: ${_cachedImageBytes != null || _cachedImageFile != null}");
+    } catch (e) {
+      print("Error loading registration data from cache in profile: $e");
+    }
+  }
 
   void _logout(BuildContext context) {
     showDialog(
@@ -63,17 +112,30 @@ class UserProfileScreen extends StatelessWidget {
 
   // Helper method to build profile image 
   Widget _buildProfileImage(BuildContext context) {
-    // Check if we have image data 
-    if (profileImageBytes != null) {
+    if (widget.profileImageBytes != null) {
       return Image.memory(
-        profileImageBytes!,
+        widget.profileImageBytes!,
         width: 120,
         height: 120,
         fit: BoxFit.cover,
       );
-    } else if (profileImageFile != null && !kIsWeb) {
+    } else if (widget.profileImageFile != null && !kIsWeb) {
       return Image.file(
-        profileImageFile!,
+        widget.profileImageFile!,
+        width: 120,
+        height: 120,
+        fit: BoxFit.cover,
+      );
+    } else if (_cachedImageBytes != null) {
+      return Image.memory(
+        _cachedImageBytes!,
+        width: 120,
+        height: 120,
+        fit: BoxFit.cover,
+      );
+    } else if (_cachedImageFile != null && !kIsWeb) {
+      return Image.file(
+        _cachedImageFile!,
         width: 120,
         height: 120,
         fit: BoxFit.cover,
@@ -171,7 +233,7 @@ class UserProfileScreen extends StatelessWidget {
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                username,
+                                _cachedUsername ?? widget.username, 
                                 style: const TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w500,
@@ -202,7 +264,7 @@ class UserProfileScreen extends StatelessWidget {
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                email,
+                                _cachedEmail ?? widget.email, 
                                 style: const TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w500,
@@ -237,7 +299,7 @@ class UserProfileScreen extends StatelessWidget {
                               width: double.infinity,
                               child: OutlinedButton.icon(
                             onPressed: () {
-                              if (authToken == null || authToken!.isEmpty) {
+                              if (widget.authToken == null || widget.authToken!.isEmpty) {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
                                     content: Text('Authentication error. Please login again to change PIN.'),
@@ -251,11 +313,11 @@ class UserProfileScreen extends StatelessWidget {
                                 context,
                                 '/change-pin',
                                 arguments: {
-                                  'authToken': authToken!,
+                                  'authToken': widget.authToken!,
                                   'isFirstTime': false,
-                                  'username': username,
-                                  'email': email,
-                                  'loginData': loginData,
+                                  'username': _cachedUsername ?? widget.username,
+                                  'email': _cachedEmail ?? widget.email,
+                                  'loginData': widget.loginData,
                                 },
                               );
                             },

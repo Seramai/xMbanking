@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter/foundation.dart';
 import 'user_profile_screen.dart';
 import 'notifications_screen.dart';
 import '../services/api_service.dart';
@@ -39,13 +40,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Map<String, dynamic>? _loginData;
   List<dynamic> _apiTransactions = [];
   List<Transaction> _miniStatement = [];
+  Uint8List? _cachedImageBytes;
+  File? _cachedImageFile;
+  String? _cachedEmail;
     @override
   void initState() {
     super.initState();
     _initializeData();
   }
   void _initializeData() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      // Loading cached registration data first
+      await _loadRegistrationDataFromCache();
+      
       final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
       
       if (args != null) {
@@ -94,8 +101,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     if (_loginData == null) {
       return;
     }
-    
-    // getting the actual data
     Map<String, dynamic> actualData;
     
     if (_loginData!['data'] != null) {
@@ -127,6 +132,35 @@ class _DashboardScreenState extends State<DashboardScreen> {
       });
     } else {
       print("No name found in data");
+    }
+  }
+  Future<void> _loadRegistrationDataFromCache() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      
+      String? cachedEmail = prefs.getString('registration_email');
+      String? cachedImageBytes = prefs.getString('registration_profileImage_bytes');
+      String? cachedImagePath = prefs.getString('registration_profileImage_path');
+      
+      setState(() {
+        _cachedEmail = cachedEmail;
+        
+        if (cachedImageBytes != null) {
+          try {
+            _cachedImageBytes = base64Decode(cachedImageBytes);
+          } catch (e) {
+            print("Error decoding cached image bytes: $e");
+          }
+        }
+        
+        if (cachedImagePath != null && !kIsWeb) {
+          _cachedImageFile = File(cachedImagePath);
+        }
+      });
+      
+      print("Cached data loaded - Email: $cachedEmail, HasImage: ${_cachedImageBytes != null || _cachedImageFile != null}");
+    } catch (e) {
+      print("Error loading registration data from cache: $e");
     }
   }
 
@@ -285,34 +319,34 @@ class _DashboardScreenState extends State<DashboardScreen> {
     });
   }
   void _navigateToProfile() {
-    String? authToken;
-    Map<String, dynamic>? loginData;
-    
-    if (_loginData != null) {
-      if (_loginData!['data'] != null) {
-        final actualData = _loginData!['data'] as Map<String, dynamic>;
-        authToken = actualData['Token'] ?? actualData['token'] ?? actualData['accessToken'];
-        loginData = _loginData;
-      } else {
-        authToken = _loginData!['Token'] ?? _loginData!['token'] ?? _loginData!['accessToken'];
-        loginData = _loginData;
+      String? authToken;
+      Map<String, dynamic>? loginData;
+      
+      if (_loginData != null) {
+        if (_loginData!['data'] != null) {
+          final actualData = _loginData!['data'] as Map<String, dynamic>;
+          authToken = actualData['Token'] ?? actualData['token'] ?? actualData['accessToken'];
+          loginData = _loginData;
+        } else {
+          authToken = _loginData!['Token'] ?? _loginData!['token'] ?? _loginData!['accessToken'];
+          loginData = _loginData;
+        }
       }
-    }
-    
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => UserProfileScreen(
-          username: _apiUsername ?? widget.username,
-          email: widget.email,
-          profileImageBytes: widget.profileImageBytes,
-          profileImageFile: widget.profileImageFile,
-          authToken: authToken,
-          loginData: loginData,
+      
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => UserProfileScreen(
+            username: _apiUsername ?? widget.username,
+            email: _cachedEmail ?? widget.email,
+            profileImageBytes: _cachedImageBytes ?? widget.profileImageBytes,
+            profileImageFile: _cachedImageFile ?? widget.profileImageFile,
+            authToken: authToken,
+            loginData: loginData,
+          ),
         ),
-      ),
-    );
-  }
+      );
+    }
 
 
   void _navigateToNotifications() {
@@ -452,6 +486,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
     } else if (widget.profileImageFile != null) {
       return Image.file(
         widget.profileImageFile!,
+        fit: BoxFit.cover,
+      );
+    } else if (_cachedImageBytes != null) {
+      return Image.memory(
+        _cachedImageBytes!,
+        fit: BoxFit.cover,
+      );
+    } else if (_cachedImageFile != null && !kIsWeb) {
+      return Image.file(
+        _cachedImageFile!,
         fit: BoxFit.cover,
       );
     } else {
