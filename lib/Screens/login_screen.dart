@@ -26,14 +26,12 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passwordController = TextEditingController();
   bool _isPinVisible = false;
   bool _isLoading = false;
-  bool _isBiometricAvailable = false;
   bool _rememberMe = false;
   final LocalAuthentication _localAuth = LocalAuthentication();
 
   @override
   void initState() {
     super.initState();
-    _checkBiometricAvailability();
   }
 
   @override
@@ -41,21 +39,6 @@ class _LoginScreenState extends State<LoginScreen> {
     _mobileNumberController.dispose();
     _passwordController.dispose();
     super.dispose();
-  }
-
-  Future<void> _checkBiometricAvailability() async {
-    try {
-      final bool isAvailable = await _localAuth.canCheckBiometrics;
-      final List<BiometricType> availableBiometrics = 
-          await _localAuth.getAvailableBiometrics();
-      setState(() {
-        _isBiometricAvailable = isAvailable && availableBiometrics.isNotEmpty;
-      });
-    } catch (e) {
-      setState(() {
-        _isBiometricAvailable = false;
-      });
-    }
   }
 
   String? _validateMobileNumber(String? value) {
@@ -97,13 +80,8 @@ class _LoginScreenState extends State<LoginScreen> {
       );
 
       if (result['success'] == true) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(result['message'] ?? 'Login successful!'),
-            backgroundColor: Colors.green,
-          ),
-        );
-        _showSuccessDialog(result['data']);
+        // Navigate directly to OTP screen without showing dialog
+        _navigateToOtpScreen(result['data']);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -125,103 +103,31 @@ class _LoginScreenState extends State<LoginScreen> {
       });
     }
   }
-
-  Future<void> _performBiometricLogin() async {
-    try {
-      setState(() {
-        _isLoading = true;
-      });
-
-      final bool didAuthenticate = await _localAuth.authenticate(
-        localizedReason: 'Please authenticate to access your account',
-        options: const AuthenticationOptions(
-          biometricOnly: true,
-          stickyAuth: true,
-        ),
-      );
-
-      if (didAuthenticate) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Biometric login successful!'),
-            backgroundColor: Colors.green,
-          ),
-        );
-        _showSuccessDialog(null);
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Biometric authentication failed'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    } catch (e) {
+  void _navigateToOtpScreen(Map<String, dynamic>? loginData) async {
+    final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+    
+    String? userId = loginData?['UserId'] ?? loginData?['userId'];
+    if (userId == null && loginData != null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Biometric error: $e'),
+        const SnackBar(
+          content: Text('Login error: User ID not found. Please try again.'),
           backgroundColor: Colors.red,
         ),
       );
-    } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      return;
     }
-  }
-
-  void _showSuccessDialog(Map<String, dynamic>? loginData) {
-    final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Row(
-            children: [
-              Icon(Icons.check_circle, color: Colors.green),
-              SizedBox(width: 8),
-              Text('Login Successful'),
-            ],
-          ),
-          content: const Text('Please verify the OTP sent to your mobile number.'),
-          actions: [
-            ElevatedButton(
-              onPressed: () {
-                String? userId = loginData?['UserId'] ?? loginData?['userId'];
-                if (userId == null) {
-                  Navigator.of(context).pop();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Login error: User ID not found. Please try again.'),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
-                  return;
-                }
-                
-                Navigator.of(context).pop();
-                Navigator.pushNamed(
-                  context,
-                  '/otp-verification',
-                  arguments: {
-                    'mobileNumber': _mobileNumberController.text,
-                    'email': loginData?['Email'] ?? loginData?['EmailAddress'] ?? '',
-                    'userId': userId,
-                    'loginData': loginData,
-                    'profileImageBytes': widget.profileImageBytes,
-                    'profileImageFile': widget.profileImageFile,
-                    'fromRegistration': args?['fromRegistration'] ?? false, 
-                  },
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Theme.of(context).primaryColor,
-                foregroundColor: Colors.white,
-              ),
-              child: const Text('Verify OTP'),
-            ),
-          ],
-        );
+    
+    Navigator.pushNamed(
+      context,
+      '/otp-verification',
+      arguments: {
+        'mobileNumber': _mobileNumberController.text,
+        'email': loginData?['Email'] ?? loginData?['EmailAddress'] ?? '',
+        'userId': userId,
+        'loginData': loginData,
+        'profileImageBytes': widget.profileImageBytes,
+        'profileImageFile': widget.profileImageFile,
+        'fromRegistration': args?['fromRegistration'] ?? false,
       },
     );
   }
@@ -385,7 +291,6 @@ Widget build(BuildContext context) {
                                     ),
                                   ),
                                 ),
-                              
                               const SizedBox(height: 16),
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -462,40 +367,6 @@ Widget build(BuildContext context) {
                                         ),
                                 ),
                               ),
-                              // if (_isBiometricAvailable) ...[
-                              //   const SizedBox(height: 16),
-                              //   SizedBox(
-                              //     width: double.infinity,
-                              //     child: OutlinedButton(
-                              //       onPressed: _isLoading ? null : _performBiometricLogin,
-                              //       style: OutlinedButton.styleFrom(
-                              //         side: BorderSide(color: Theme.of(context).primaryColor, width: 2),
-                              //         padding: const EdgeInsets.symmetric(vertical: 16),
-                              //         shape: RoundedRectangleBorder(
-                              //           borderRadius: BorderRadius.circular(8),
-                              //         ),
-                              //       ),
-                              //       child: Row(
-                              //         mainAxisAlignment: MainAxisAlignment.center,
-                              //         children: [
-                              //           Icon(
-                              //             Icons.fingerprint,
-                              //             color: Theme.of(context).primaryColor,
-                              //           ),
-                              //           const SizedBox(width: 8),
-                              //           Text(
-                              //             'Use Biometric',
-                              //             style: TextStyle(
-                              //               color: Theme.of(context).primaryColor,
-                              //               fontSize: 16,
-                              //               fontWeight: FontWeight.w500,
-                              //             ),
-                              //           ),
-                              //         ],
-                              //       ),
-                              //     ),
-                              //   ),
-                              // ],
                             ],
                           ),
                         ),
