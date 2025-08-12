@@ -13,6 +13,7 @@ class UserProfileScreen extends StatefulWidget {
   final Uint8List? profileImageBytes;
   final String? authToken; 
   final Map<String, dynamic>? loginData;
+  final String? mobileNumber; 
   
   const UserProfileScreen({
     super.key,
@@ -22,6 +23,7 @@ class UserProfileScreen extends StatefulWidget {
     this.profileImageBytes,
     this.authToken, 
     this.loginData,
+    this.mobileNumber, 
   });
 
   @override
@@ -43,11 +45,24 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   Future<void> _loadRegistrationDataFromCache() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      
-      String? cachedEmail = prefs.getString('registration_email');
-      String? cachedUsername = prefs.getString('registration_fullName');
-      String? cachedImageBytes = prefs.getString('registration_profileImage_bytes');
-      String? cachedImagePath = prefs.getString('registration_profileImage_path');
+      String? cachedEmail;
+      String? cachedUsername;
+      String? cachedImageBytes;
+      String? cachedImagePath;
+      if (widget.mobileNumber != null) {
+        cachedEmail = prefs.getString('user_${widget.mobileNumber}_email');
+        cachedUsername = prefs.getString('user_${widget.mobileNumber}_fullName');
+        cachedImageBytes = prefs.getString('user_${widget.mobileNumber}_profileImage_bytes');
+        cachedImagePath = prefs.getString('user_${widget.mobileNumber}_profileImage_path');
+        print("Loading profile cached data for phone: ${widget.mobileNumber}");
+      }
+      if (cachedEmail == null) {
+        cachedEmail = prefs.getString('registration_email');
+        cachedUsername = prefs.getString('registration_fullName');
+        cachedImageBytes = prefs.getString('registration_profileImage_bytes');
+        cachedImagePath = prefs.getString('registration_profileImage_path');
+        print("Using fallback generic cache data in profile");
+      }
       
       setState(() {
         _cachedEmail = cachedEmail;

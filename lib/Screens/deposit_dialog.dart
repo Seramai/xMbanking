@@ -33,9 +33,24 @@ class _DepositDialogState extends State<DepositDialog> {
   void initState() {
     super.initState();
     _loadCurrency();
-    if (widget.lockedPhoneNumber != null) {
-      _phoneController.text = widget.lockedPhoneNumber!;
+    
+    if (widget.lockedPhoneNumber != null && widget.lockedPhoneNumber!.isNotEmpty) {
+      String phoneNumber = widget.lockedPhoneNumber!;
+      if (_isValidPhoneFormat(phoneNumber)) {
+        _phoneController.text = phoneNumber;
+        print("Deposit Dialog - Locked phone number set: $phoneNumber");
+      } else {
+        print("Deposit Dialog - Invalid phone format: $phoneNumber");
+      }
+    } else {
+      print("Deposit Dialog - No locked phone number provided");
     }
+  }
+  bool _isValidPhoneFormat(String phone) {
+    String cleanedPhone = phone.replaceAll(RegExp(r'[^\d]'), '');
+    return (cleanedPhone.startsWith('254') && cleanedPhone.length == 12) ||
+          (cleanedPhone.startsWith('0') && cleanedPhone.length == 10) ||
+          (cleanedPhone.startsWith('7') && cleanedPhone.length == 9);
   }
 
   @override
@@ -357,8 +372,10 @@ class _DepositDialogState extends State<DepositDialog> {
                       : FontWeight.normal,
                 ),
                 validator: _validatePhone,
-                enabled: widget.lockedPhoneNumber == null && !_isProcessing,
-              ),
+                enabled: (widget.lockedPhoneNumber == null || 
+                          widget.lockedPhoneNumber!.isEmpty || 
+                          !_isValidPhoneFormat(widget.lockedPhoneNumber!)) && !_isProcessing,
+                ),
               const SizedBox(height: 20),
               const Text(
                 'Remarks (Optional)',

@@ -448,18 +448,26 @@ Future<void> _pickSignature() async {
   Future<void> _saveRegistrationDataToCache(String email, dynamic imageData, String fullName) async {
     try {
       final prefs = await SharedPreferences.getInstance();
+      String phoneKey = _mobileController.text.trim();
+      await prefs.setString('user_${phoneKey}_email', email);
+      await prefs.setString('user_${phoneKey}_fullName', fullName);
+      
+      if (_selfieImageBytes != null) {
+        String base64Image = base64Encode(_selfieImageBytes!);
+        await prefs.setString('user_${phoneKey}_profileImage_bytes', base64Image);
+        await prefs.remove('user_${phoneKey}_profileImage_path');
+      } else if (_selfieImage != null) {
+        await prefs.setString('user_${phoneKey}_profileImage_path', _selfieImage!.path);
+        await prefs.remove('user_${phoneKey}_profileImage_bytes');
+      }
       await prefs.setString('registration_email', email);
       await prefs.setString('registration_fullName', fullName);
       if (_selfieImageBytes != null) {
         String base64Image = base64Encode(_selfieImageBytes!);
         await prefs.setString('registration_profileImage_bytes', base64Image);
-        await prefs.remove('registration_profileImage_path');
       } else if (_selfieImage != null) {
         await prefs.setString('registration_profileImage_path', _selfieImage!.path);
-        await prefs.remove('registration_profileImage_bytes');
       }
-      
-      print("Registration data saved to cache successfully");
     } catch (e) {
       print("Error saving registration data to cache: $e");
     }

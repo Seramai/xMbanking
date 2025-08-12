@@ -37,11 +37,25 @@ class _WithdrawDialogState extends State<WithdrawDialog> {
     super.initState();
     _loadCachedToken();
     _loadCurrency();
-      if (widget.lockedPhoneNumber != null) {
-      _phoneController.text = widget.lockedPhoneNumber!;
+    
+    if (widget.lockedPhoneNumber != null && widget.lockedPhoneNumber!.isNotEmpty) {
+      String phoneNumber = widget.lockedPhoneNumber!;
+      if (_isValidPhoneFormat(phoneNumber)) {
+        _phoneController.text = phoneNumber;
+        print("Withdraw Dialog - Locked phone number set: $phoneNumber");
+      } else {
+        print("Withdraw Dialog - Invalid phone format: $phoneNumber");
+      }
+    } else {
+      print("Withdraw Dialog - No locked phone number provided");
     }
   }
-
+  bool _isValidPhoneFormat(String phone) {
+    String cleanedPhone = phone.replaceAll(RegExp(r'[^\d]'), '');
+    return (cleanedPhone.startsWith('254') && cleanedPhone.length == 12) ||
+          (cleanedPhone.startsWith('0') && cleanedPhone.length == 10) ||
+          (cleanedPhone.startsWith('7') && cleanedPhone.length == 9);
+  }
   @override
   void dispose() {
     _amountController.dispose();
@@ -432,8 +446,10 @@ class _WithdrawDialogState extends State<WithdrawDialog> {
                               : FontWeight.normal,
                         ),
                         validator: _validatePhone,
-                        enabled: widget.lockedPhoneNumber == null && !_isProcessing,
-                      ),
+                        enabled: (widget.lockedPhoneNumber == null || 
+                              widget.lockedPhoneNumber!.isEmpty || 
+                              !_isValidPhoneFormat(widget.lockedPhoneNumber!)) && !_isProcessing,
+                        ),
                       const SizedBox(height: 24),
                       SizedBox(
                         width: double.infinity,

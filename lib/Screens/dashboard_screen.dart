@@ -74,9 +74,33 @@ class _DashboardScreenState extends State<DashboardScreen> {
       
       if (args != null) {
         if (args['loginData'] != null) {
-          setState(() {
-            _loginData = args['loginData'];
-            _userMobileNumber = args['mobileNumber'] ?? args['loginData']?['MobileNumber'] ?? args['loginData']?['data']?['MobileNumber'];
+        setState(() {
+          _loginData = args['loginData'];
+          String? extractedPhoneFromToken;
+          try {
+            if (args['loginData']?['data']?['Token'] != null) {
+              String token = args['loginData']['data']['Token'];
+              List<String> parts = token.split('.');
+              if (parts.length == 3) {
+                String payload = parts[1];
+                while (payload.length % 4 != 0) {
+                  payload += '=';
+                }
+                String decoded = utf8.decode(base64.decode(payload));
+                Map<String, dynamic> tokenData = json.decode(decoded);
+                extractedPhoneFromToken = tokenData['UserName']; 
+              }
+            }
+          } catch (e) {
+            print("Dashboard - Error extracting phone from token: $e");
+          }
+          _userMobileNumber = extractedPhoneFromToken ?? 
+                            args['mobileNumber'] ?? 
+                            args['phoneNumber'] ?? 
+                            widget.username;
+            if (args['loginData']?['data'] != null) {
+              print("Dashboard - Available data keys: ${args['loginData']['data'].keys}");
+            }
             if (args['useStoredData'] == true || 
             _loginData?['needsRefresh'] == true ||
             _loginData?['data']?['balance'] == null) {
@@ -157,12 +181,34 @@ class _DashboardScreenState extends State<DashboardScreen> {
     try {
       final prefs = await SharedPreferences.getInstance();
       
-      String? cachedEmail = prefs.getString('registration_email');
-      String? cachedImageBytes = prefs.getString('registration_profileImage_bytes');
-      String? cachedImagePath = prefs.getString('registration_profileImage_path');
+      String? phoneKey;
+      final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+      if (args != null && args['mobileNumber'] != null) {
+        phoneKey = args['mobileNumber'];
+      } else if (_userMobileNumber != null) {
+        phoneKey = _userMobileNumber;
+      }
+      
+      String? cachedEmail;
+      String? cachedImageBytes;
+      String? cachedImagePath;
+      String? cachedUsername;
+      if (phoneKey != null) {
+        cachedEmail = prefs.getString('user_${phoneKey}_email');
+        cachedImageBytes = prefs.getString('user_${phoneKey}_profileImage_bytes');
+        cachedImagePath = prefs.getString('user_${phoneKey}_profileImage_path');
+        cachedUsername = prefs.getString('user_${phoneKey}_fullName');
+      }
+      if (cachedEmail == null) {
+        cachedEmail = prefs.getString('registration_email');
+        cachedImageBytes = prefs.getString('registration_profileImage_bytes');
+        cachedImagePath = prefs.getString('registration_profileImage_path');
+        cachedUsername = prefs.getString('registration_fullName');
+      }
       
       setState(() {
         _cachedEmail = cachedEmail;
+        _apiUsername = cachedUsername ?? _apiUsername;
         
         if (cachedImageBytes != null) {
           try {
@@ -177,7 +223,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         }
       });
       
-      print("Cached data loaded - Email: $cachedEmail, HasImage: ${_cachedImageBytes != null || _cachedImageFile != null}");
+      print("Cached data loaded - Email: $cachedEmail, Username: $cachedUsername, HasImage: ${_cachedImageBytes != null || _cachedImageFile != null}");
     } catch (e) {
       print("Error loading registration data from cache: $e");
     }
@@ -338,34 +384,35 @@ class _DashboardScreenState extends State<DashboardScreen> {
     });
   }
   void _navigateToProfile() {
-      String? authToken;
-      Map<String, dynamic>? loginData;
-      
-      if (_loginData != null) {
-        if (_loginData!['data'] != null) {
-          final actualData = _loginData!['data'] as Map<String, dynamic>;
-          authToken = actualData['Token'] ?? actualData['token'] ?? actualData['accessToken'];
-          loginData = _loginData;
-        } else {
-          authToken = _loginData!['Token'] ?? _loginData!['token'] ?? _loginData!['accessToken'];
-          loginData = _loginData;
-        }
+    String? authToken;
+    Map<String, dynamic>? loginData;
+    
+    if (_loginData != null) {
+      if (_loginData!['data'] != null) {
+        final actualData = _loginData!['data'] as Map<String, dynamic>;
+        authToken = actualData['Token'] ?? actualData['token'] ?? actualData['accessToken'];
+        loginData = _loginData;
+      } else {
+        authToken = _loginData!['Token'] ?? _loginData!['token'] ?? _loginData!['accessToken'];
+        loginData = _loginData;
       }
-      
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => UserProfileScreen(
-            username: _apiUsername ?? widget.username,
-            email: _cachedEmail ?? widget.email,
-            profileImageBytes: _cachedImageBytes ?? widget.profileImageBytes,
-            profileImageFile: _cachedImageFile ?? widget.profileImageFile,
-            authToken: authToken,
-            loginData: loginData,
-          ),
-        ),
-      );
     }
+    
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => UserProfileScreen(
+          username: _apiUsername ?? widget.username,
+          email: _cachedEmail ?? widget.email,
+          profileImageBytes: _cachedImageBytes ?? widget.profileImageBytes,
+          profileImageFile: _cachedImageFile ?? widget.profileImageFile,
+          authToken: authToken,
+          loginData: loginData,
+          mobileNumber: _userMobileNumber,
+        ),
+      ),
+    );
+  }
 
 
   void _navigateToNotifications() {
@@ -397,7 +444,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       builder: (BuildContext context) {
         return DepositDialog(
           authToken: authToken!,
-          lockedPhoneNumber: _userMobileNumber, 
+          lockedPhoneNumber: _userMobileNumber ?? widget.username, 
           onDepositSuccess: (double amount, String phoneNumber) {
             setState(() {
               _accountBalance += amount;
@@ -456,7 +503,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         return WithdrawDialog(
           currentBalance: _accountBalance,
           authToken: authToken!,
-          lockedPhoneNumber: _userMobileNumber, 
+          lockedPhoneNumber: _userMobileNumber ?? widget.username, 
           onWithdrawSuccess: (double amount, String phoneNumber) {
             setState(() {
               _accountBalance -= amount;
