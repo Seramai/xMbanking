@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import '../Services/api_service.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../Services/currency_service.dart';
 
 class WithdrawDialog extends StatefulWidget {
   final Function(double amount, String phoneNumber) onWithdrawSuccess;
@@ -26,11 +27,14 @@ class _WithdrawDialogState extends State<WithdrawDialog> {
   final _phoneController = TextEditingController();
   bool _isProcessing = false;
   String? _cachedToken;
+  String _currentCurrency = '';
+  String _currentCurrencySymbol = '';
 
   @override
   void initState() {
     super.initState();
     _loadCachedToken();
+    _loadCurrency();
   }
 
   @override
@@ -39,6 +43,17 @@ class _WithdrawDialogState extends State<WithdrawDialog> {
     _phoneController.dispose();
     super.dispose();
   }
+  Future<void> _loadCurrency() async {
+    final currency = await CurrencyService.getCurrency() ?? '';
+    final currencySymbol = await CurrencyService.getCurrencySymbol();
+    
+    if (mounted) {
+      setState(() {
+        _currentCurrency = currency;
+        _currentCurrencySymbol = currencySymbol;
+      });
+    }
+}
 
   Future<void> _loadCachedToken() async {
     try {
@@ -67,10 +82,10 @@ class _WithdrawDialogState extends State<WithdrawDialog> {
       return 'Please enter a valid amount';
     }
     if (amount < 10) {
-      return 'Minimum withdrawal amount is KES 10';
+      return 'Minimum withdrawal amount is $_currentCurrencySymbol 10';
     }
-    if (amount > 70000) {
-      return 'Maximum withdrawal amount is KES 70,000';
+    if (amount > 7000000) {
+      return 'Maximum withdrawal amount is $_currentCurrencySymbol 7000,000';
     }
     if (amount > widget.currentBalance) {
       return 'Insufficient balance';
@@ -288,7 +303,7 @@ class _WithdrawDialogState extends State<WithdrawDialog> {
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
-                                'Balance: KES ${NumberFormat("#,##0.00").format(widget.currentBalance)}', 
+                                'Balance: $_currentCurrencySymbol ${NumberFormat("#,##0.00").format(widget.currentBalance)}', 
                                 style: TextStyle(
                                   color: Colors.blue.shade700,
                                   fontSize: 14,
@@ -300,9 +315,9 @@ class _WithdrawDialogState extends State<WithdrawDialog> {
                         ),
                       ),
                       const SizedBox(height: 20),
-                      const Text(
-                        'Amount (KES)',
-                        style: TextStyle(
+                      Text(
+                        'Amount ($_currentCurrencySymbol)',
+                        style: const TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w500,
                           color: Colors.grey,
@@ -317,7 +332,7 @@ class _WithdrawDialogState extends State<WithdrawDialog> {
                         ],
                         decoration: InputDecoration(
                           hintText: 'Enter amount',
-                          prefixText: 'KES ',
+                          prefixText: '$_currentCurrencySymbol ',
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
                             borderSide: BorderSide(color: Colors.grey.shade300),
@@ -587,13 +602,19 @@ class _WithdrawStkPushDialogState extends State<WithdrawStkPushDialog>
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 8),
-                Text(
-                  'KES ${widget.amount.toStringAsFixed(2)} has been sent to ${widget.phoneNumber}.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Colors.grey.shade600,
-                    fontSize: 14,
-                  ),
+                FutureBuilder<String>(
+                  future: CurrencyService.getCurrencySymbol(),
+                  builder: (context, snapshot) {
+                    final symbol = snapshot.data ?? '';
+                    return Text(
+                      '$symbol ${widget.amount.toStringAsFixed(2)} has been sent to ${widget.phoneNumber}.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: Colors.grey.shade600,
+                        fontSize: 14,
+                      ),
+                    );
+                  },
                 ),
                 const SizedBox(height: 8),
                 Text(

@@ -10,6 +10,7 @@ import 'deposit_dialog.dart';
 import 'withdraw_dialog.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert'; 
+import '../Services/currency_service.dart';
 
 
 class DashboardScreen extends StatefulWidget {
@@ -17,6 +18,7 @@ class DashboardScreen extends StatefulWidget {
   final String email;
   final File? profileImageFile;
   final Uint8List? profileImageBytes;
+  
   
   const DashboardScreen({
     super.key,
@@ -34,6 +36,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
   bool _isBalanceVisible = true;
   double _accountBalance = 0.0;
   String? _apiUsername;
+  String _currentCurrency = '';
+  String _currentCurrencySymbol = '';
   final int _numberOfAccounts = 2;
   final int _notificationCount = 3;
   // they are varibales that will store the api responses
@@ -47,6 +51,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
   void initState() {
     super.initState();
     _initializeData();
+    _loadCurrency();
+  }
+  Future<void> _loadCurrency() async {
+    final currency = await CurrencyService.getCurrency() ?? '';
+    final currencySymbol = await CurrencyService.getCurrencySymbol();
+    
+    if (mounted) {
+      setState(() {
+        _currentCurrency = currency;
+        _currentCurrencySymbol = currencySymbol;
+      });
+    }
   }
   void _initializeData() {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
@@ -398,7 +414,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   children: [
                     const Icon(Icons.check_circle, color: Colors.white),
                     const SizedBox(width: 8),
-                    Text('Successfully deposited KES ${amount.toStringAsFixed(2)}'),
+                    Text('Successfully deposited $_currentCurrencySymbol ${amount.toStringAsFixed(2)}'),
                   ],
                 ),
                 backgroundColor: Colors.green,
@@ -459,7 +475,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   children: [
                     const Icon(Icons.check_circle, color: Colors.white),
                     const SizedBox(width: 8),
-                    Text('Successfully withdrew KES ${amount.toStringAsFixed(2)}'),
+                    Text('Successfully withdrew $_currentCurrencySymbol ${amount.toStringAsFixed(2)}'),
                   ],
                 ),
                 backgroundColor: Colors.orange,
@@ -654,8 +670,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           const SizedBox(height: 8),
                           Text(
                             _isBalanceVisible
-                                ? 'KES ${NumberFormat("#,##0.00").format(_accountBalance)}'
-                                : 'KES ••••••',
+                                ? '$_currentCurrencySymbol ${NumberFormat("#,##0.00").format(_accountBalance)}'
+                                : '$_currentCurrencySymbol ••••••',
                             style: TextStyle(
                               fontSize: 28,
                               fontWeight: FontWeight.bold,
@@ -861,16 +877,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   crossAxisAlignment: CrossAxisAlignment.end,
                                   children: [
-                                    Text(
-                                      '${transaction.amount >= 0 ? '+' : ''}KES ${NumberFormat("#,##0.00").format(transaction.amount.abs())}',
-                                      style: TextStyle(
-                                        color: transaction.type == TransactionType.credit
-                                            ? Colors.green
-                                            : Colors.red,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 14,
-                                      ),
+                                  Text(
+                                    '${transaction.amount >= 0 ? '+' : ''}$_currentCurrencySymbol ${NumberFormat("#,##0.00").format(transaction.amount.abs())}',
+                                    style: TextStyle(
+                                      color: transaction.type == TransactionType.credit
+                                          ? Colors.green
+                                          : Colors.red,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14,
                                     ),
+                                  ),
                                     const SizedBox(height: 2),
                                     Container(
                                       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),

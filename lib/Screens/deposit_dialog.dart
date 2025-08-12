@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../Services/api_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../Services/currency_service.dart';
 
 class DepositDialog extends StatefulWidget {
   final Function(double amount, String phoneNumber) onDepositSuccess;
@@ -23,6 +24,14 @@ class _DepositDialogState extends State<DepositDialog> {
   final _phoneController = TextEditingController();
   final _remarksController = TextEditingController();
   bool _isProcessing = false;
+  String _currentCurrency = '';
+  String _currentCurrencySymbol = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCurrency();
+  }
 
   @override
   void dispose() {
@@ -30,6 +39,17 @@ class _DepositDialogState extends State<DepositDialog> {
     _phoneController.dispose();
     _remarksController.dispose();
     super.dispose();
+  }
+  Future<void> _loadCurrency() async {
+    final currency = await CurrencyService.getCurrency() ?? '';
+    final currencySymbol = await CurrencyService.getCurrencySymbol();
+    
+    if (mounted) {
+      setState(() {
+        _currentCurrency = currency;
+        _currentCurrencySymbol = currencySymbol;
+      });
+    }
   }
 
   String? _validateAmount(String? value) {
@@ -41,10 +61,10 @@ class _DepositDialogState extends State<DepositDialog> {
       return 'Please enter a valid amount';
     }
     if (amount < 10) {
-      return 'Minimum deposit amount is KES 10';
+      return 'Minimum deposit amount is $_currentCurrencySymbol 10';
     }
-    if (amount > 150000) {
-      return 'Maximum deposit amount is KES 150,000';
+    if (amount > 15000000) {
+      return 'Maximum deposit amount is $_currentCurrencySymbol 15,000,000';
     }
     return null;
   }
@@ -220,9 +240,9 @@ class _DepositDialogState extends State<DepositDialog> {
                 ],
               ),
               const SizedBox(height: 24),
-              const Text(
-                'Amount (KES)',
-                style: TextStyle(
+              Text(
+                'Amount ($_currentCurrencySymbol)',
+                style: const TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w500,
                   color: Colors.grey,
@@ -237,7 +257,7 @@ class _DepositDialogState extends State<DepositDialog> {
                 ],
                 decoration: InputDecoration(
                   hintText: 'Enter amount',
-                  prefixText: 'KES ',
+                  prefixText: '$_currentCurrencySymbol ',
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide(color: Colors.grey.shade300),
@@ -539,13 +559,19 @@ class _StkPushDialogState extends State<StkPushDialog>
                   ),
                 ),
                 const SizedBox(height: 8),
-                Text(
-                  'KES ${widget.amount.toStringAsFixed(2)} has been deposited to your account.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Colors.grey.shade600,
-                    fontSize: 14,
-                  ),
+                FutureBuilder<String>(
+                  future: CurrencyService.getCurrencySymbol(),
+                  builder: (context, snapshot) {
+                    final symbol = snapshot.data ?? '';
+                    return Text(
+                      '$symbol ${widget.amount.toStringAsFixed(2)} has been deposited to your account.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: Colors.grey.shade600,
+                        fontSize: 14,
+                      ),
+                    );
+                  },
                 ),
                 const SizedBox(height: 24),
                 SizedBox(

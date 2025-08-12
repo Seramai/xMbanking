@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:local_auth/local_auth.dart';
 import '../Services/api_service.dart';
+import '../widgets/currency_selection_dialog.dart';
+import '../Services/currency_service.dart';
 import 'menu_drawer_screen.dart';
 import 'dart:io';
 import 'dart:typed_data';
@@ -80,8 +82,13 @@ class _LoginScreenState extends State<LoginScreen> {
       );
 
       if (result['success'] == true) {
-        // Navigate directly to OTP screen without showing dialog
-        _navigateToOtpScreen(result['data']);
+        final isCurrencySelected = await CurrencyService.isCurrencySelected();
+        
+        if (!isCurrencySelected) {
+          _showCurrencySelectionDialog(result['data']);
+        } else {
+          _navigateToOtpScreen(result['data']);
+        }
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -102,6 +109,20 @@ class _LoginScreenState extends State<LoginScreen> {
         _isLoading = false;
       });
     }
+  }
+  void _showCurrencySelectionDialog(Map<String, dynamic>? loginData) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return CurrencySelectionDialog(
+          onCurrencySelected: (selectedCurrency) async {
+            await CurrencyService.setCurrency(selectedCurrency);
+            _navigateToOtpScreen(loginData);
+          },
+        );
+      },
+    );
   }
   void _navigateToOtpScreen(Map<String, dynamic>? loginData) async {
     final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
