@@ -9,12 +9,14 @@ class WithdrawDialog extends StatefulWidget {
   final Function(double amount, String phoneNumber) onWithdrawSuccess;
   final double currentBalance;
   final String? authToken;
+  final String? lockedPhoneNumber; 
 
   const WithdrawDialog({
     super.key,
     required this.onWithdrawSuccess,
     required this.currentBalance,
     this.authToken,
+    this.lockedPhoneNumber, 
   });
 
   @override
@@ -35,6 +37,9 @@ class _WithdrawDialogState extends State<WithdrawDialog> {
     super.initState();
     _loadCachedToken();
     _loadCurrency();
+      if (widget.lockedPhoneNumber != null) {
+      _phoneController.text = widget.lockedPhoneNumber!;
+    }
   }
 
   @override
@@ -373,29 +378,61 @@ class _WithdrawDialogState extends State<WithdrawDialog> {
                           LengthLimitingTextInputFormatter(12),
                         ],
                         decoration: InputDecoration(
-                          hintText: '0712345678 or 254...',
-                          prefixIcon: const Icon(Icons.phone_android),
+                          hintText: widget.lockedPhoneNumber == null 
+                              ? '0712345678 or 254...'
+                              : null,
+                          prefixIcon: Icon(
+                            Icons.phone_android,
+                            color: widget.lockedPhoneNumber != null 
+                                ? Colors.grey.shade500 
+                                : null,
+                          ),
+                          suffixIcon: widget.lockedPhoneNumber != null 
+                              ? Icon(Icons.lock, color: Colors.grey.shade500) 
+                              : null,
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(color: Colors.grey.shade300),
+                            borderSide: BorderSide(
+                              color: widget.lockedPhoneNumber != null 
+                                  ? Colors.grey.shade400 
+                                  : Colors.grey.shade300,
+                            ),
                           ),
                           enabledBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(color: Colors.grey.shade300),
+                            borderSide: BorderSide(
+                              color: widget.lockedPhoneNumber != null 
+                                  ? Colors.grey.shade400 
+                                  : Colors.grey.shade300,
+                            ),
+                          ),
+                          disabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: Colors.grey.shade400),
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
                             borderSide: const BorderSide(color: Colors.red),
                           ),
                           filled: true,
-                          fillColor: Colors.white,
+                          fillColor: widget.lockedPhoneNumber != null 
+                              ? Colors.grey.shade200 
+                              : Colors.white,
                           contentPadding: const EdgeInsets.symmetric(
                             horizontal: 16,
                             vertical: 16,
                           ),
                         ),
+                        style: TextStyle(
+                          color: widget.lockedPhoneNumber != null 
+                              ? Colors.grey.shade700 
+                              : Colors.black,
+                          fontWeight: widget.lockedPhoneNumber != null 
+                              ? FontWeight.w500 
+                              : FontWeight.normal,
+                        ),
                         validator: _validatePhone,
-                        enabled: !_isProcessing,
+                        enabled: widget.lockedPhoneNumber == null && !_isProcessing,
                       ),
                       const SizedBox(height: 24),
                       SizedBox(
@@ -698,7 +735,7 @@ class _WithdrawStkPushDialogState extends State<WithdrawStkPushDialog>
             ),
             const SizedBox(height: 8),
             Text(
-              'Check your phone for M-Pesa prompt to confirm withdrawal',
+              'Check your phone for a prompt to confirm withdrawal',
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: Colors.grey.shade600,

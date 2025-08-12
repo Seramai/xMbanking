@@ -7,11 +7,13 @@ import '../Services/currency_service.dart';
 class DepositDialog extends StatefulWidget {
   final Function(double amount, String phoneNumber) onDepositSuccess;
   final String authToken;
+  final String? lockedPhoneNumber; 
 
   const DepositDialog({
     super.key,
     required this.onDepositSuccess,
     required this.authToken,
+    this.lockedPhoneNumber,
   });
 
   @override
@@ -31,6 +33,9 @@ class _DepositDialogState extends State<DepositDialog> {
   void initState() {
     super.initState();
     _loadCurrency();
+    if (widget.lockedPhoneNumber != null) {
+      _phoneController.text = widget.lockedPhoneNumber!;
+    }
   }
 
   @override
@@ -298,29 +303,61 @@ class _DepositDialogState extends State<DepositDialog> {
                   LengthLimitingTextInputFormatter(12),
                 ],
                 decoration: InputDecoration(
-                  hintText: '0712345678 or 254712345678',
-                  prefixIcon: const Icon(Icons.phone_android),
+                  hintText: widget.lockedPhoneNumber == null 
+                      ? '0712345678 or 254712345678'
+                      : null,
+                  prefixIcon: Icon(
+                    Icons.phone_android,
+                    color: widget.lockedPhoneNumber != null 
+                        ? Colors.grey.shade500 
+                        : null,
+                  ),
+                  suffixIcon: widget.lockedPhoneNumber != null 
+                      ? Icon(Icons.lock, color: Colors.grey.shade500) 
+                      : null,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: Colors.grey.shade300),
+                    borderSide: BorderSide(
+                      color: widget.lockedPhoneNumber != null 
+                          ? Colors.grey.shade400 
+                          : Colors.grey.shade300,
+                    ),
                   ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: Colors.grey.shade300),
+                    borderSide: BorderSide(
+                      color: widget.lockedPhoneNumber != null 
+                          ? Colors.grey.shade400 
+                          : Colors.grey.shade300,
+                    ),
+                  ),
+                  disabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.grey.shade400),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide(color: Theme.of(context).primaryColor),
                   ),
                   filled: true,
-                  fillColor: Colors.grey.shade50,
+                  fillColor: widget.lockedPhoneNumber != null 
+                      ? Colors.grey.shade200
+                      : Colors.grey.shade50,
                   contentPadding: const EdgeInsets.symmetric(
                     horizontal: 16,
                     vertical: 16,
                   ),
                 ),
+                style: TextStyle(
+                  color: widget.lockedPhoneNumber != null 
+                      ? Colors.grey.shade700
+                      : Colors.black,
+                  fontWeight: widget.lockedPhoneNumber != null 
+                      ? FontWeight.w500 
+                      : FontWeight.normal,
+                ),
                 validator: _validatePhone,
-                enabled: !_isProcessing,
+                enabled: widget.lockedPhoneNumber == null && !_isProcessing,
               ),
               const SizedBox(height: 20),
               const Text(
@@ -642,7 +679,7 @@ class _StkPushDialogState extends State<StkPushDialog>
             ),
             const SizedBox(height: 8),
             Text(
-              'Check your phone for M-Pesa prompt',
+              'Check your phone for a pin prompt',
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: Colors.grey.shade600,

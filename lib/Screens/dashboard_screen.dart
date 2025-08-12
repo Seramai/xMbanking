@@ -38,6 +38,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   String? _apiUsername;
   String _currentCurrency = '';
   String _currentCurrencySymbol = '';
+  String? _userMobileNumber;
   final int _numberOfAccounts = 2;
   final int _notificationCount = 3;
   // they are varibales that will store the api responses
@@ -75,6 +76,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         if (args['loginData'] != null) {
           setState(() {
             _loginData = args['loginData'];
+            _userMobileNumber = args['mobileNumber'] ?? args['loginData']?['MobileNumber'] ?? args['loginData']?['data']?['MobileNumber'];
             if (args['useStoredData'] == true || 
             _loginData?['needsRefresh'] == true ||
             _loginData?['data']?['balance'] == null) {
@@ -85,6 +87,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       });
         }
         else if (args['authToken'] != null) {
+          _userMobileNumber = args['mobileNumber'];
           _refreshDashboardOnInit(args['authToken']);
         }
       } else {
@@ -394,6 +397,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       builder: (BuildContext context) {
         return DepositDialog(
           authToken: authToken!,
+          lockedPhoneNumber: _userMobileNumber, 
           onDepositSuccess: (double amount, String phoneNumber) {
             setState(() {
               _accountBalance += amount;
@@ -452,6 +456,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         return WithdrawDialog(
           currentBalance: _accountBalance,
           authToken: authToken!,
+          lockedPhoneNumber: _userMobileNumber, 
           onWithdrawSuccess: (double amount, String phoneNumber) {
             setState(() {
               _accountBalance -= amount;
