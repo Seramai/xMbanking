@@ -156,6 +156,10 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('loginData', jsonEncode(completeLoginData));
         await prefs.setString('authToken', authToken ?? '');
+        await prefs.setString('userId', widget.userId);
+        await prefs.setString('userEmail', widget.email);
+        await prefs.setString('userMobile', widget.mobileNumber);
+        await prefs.setBool('isLoggedIn', true);
 
         _showSnackBar('OTP verified successfully!', Colors.green);
         if (isFirstTimeUser) {

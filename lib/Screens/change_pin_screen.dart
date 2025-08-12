@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../Services/api_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ChangePinScreen extends StatefulWidget {
   final String authToken;
@@ -92,7 +93,13 @@ class _ChangePinScreenState extends State<ChangePinScreen> {
       return;
     }
 
-    if (widget.authToken.isEmpty) {
+  String? authToken = widget.authToken;
+  if (authToken.isEmpty) {
+    // getting token from cache
+    final prefs = await SharedPreferences.getInstance();
+    authToken = prefs.getString('authToken') ?? '';
+    
+    if (authToken.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Authentication error. Please login again.'),
@@ -101,6 +108,7 @@ class _ChangePinScreenState extends State<ChangePinScreen> {
       );
       return;
     }
+  }
 
     setState(() {
       _isLoading = true;
@@ -108,7 +116,7 @@ class _ChangePinScreenState extends State<ChangePinScreen> {
 
     try {
       final result = await ApiService.changePin(
-        token: widget.authToken,
+        token: authToken,
         currentPin: _currentPinController.text.trim(),
         newPin: _newPinController.text.trim(),
         confirmNewPin: _confirmPinController.text.trim(),

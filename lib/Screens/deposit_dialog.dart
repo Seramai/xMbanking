@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../Services/api_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class DepositDialog extends StatefulWidget {
   final Function(double amount, String phoneNumber) onDepositSuccess;
@@ -84,21 +85,26 @@ class _DepositDialogState extends State<DepositDialog> {
       });
 
       try {
-        String? authToken = widget.authToken; 
-        
-        if (authToken.isEmpty) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Authentication error. Please login again.'),
-              backgroundColor: Colors.red,
-            ),
-          );
-          setState(() {
-            _isProcessing = false;
-          });
-          return;
-        }
+        String? authToken = widget.authToken;
 
+        if (authToken.isEmpty) {
+          //getting token from cache
+          final prefs = await SharedPreferences.getInstance();
+          authToken = prefs.getString('authToken') ?? '';
+          
+          if (authToken.isEmpty) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Authentication error. Please login again.'),
+                backgroundColor: Colors.red,
+              ),
+            );
+            setState(() {
+              _isProcessing = false;
+            });
+            return;
+          }
+        }
         final result = await ApiService.processDeposit(
           token: authToken,
           phoneNumber: _formatPhoneNumber(_phoneController.text),

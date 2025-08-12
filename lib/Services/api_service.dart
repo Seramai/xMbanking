@@ -228,7 +228,7 @@ class ApiService {
         final responseData = jsonDecode(response.body);
         return {
           'success': true,
-          'message': 'Login successful',
+          'message': 'Verify account with OTP',
           'data': responseData,
         };
       } else if (response.statusCode == 401) {

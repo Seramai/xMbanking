@@ -2,17 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../Services/api_service.dart';
 import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class WithdrawDialog extends StatefulWidget {
   final Function(double amount, String phoneNumber) onWithdrawSuccess;
   final double currentBalance;
-  final String authToken;
+  final String? authToken;
 
   const WithdrawDialog({
     super.key,
     required this.onWithdrawSuccess,
     required this.currentBalance,
-    required this.authToken,
+    this.authToken,
   });
 
   @override
@@ -24,12 +25,37 @@ class _WithdrawDialogState extends State<WithdrawDialog> {
   final _amountController = TextEditingController();
   final _phoneController = TextEditingController();
   bool _isProcessing = false;
+  String? _cachedToken;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCachedToken();
+  }
 
   @override
   void dispose() {
     _amountController.dispose();
     _phoneController.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadCachedToken() async {
+    try {
+      if (widget.authToken != null && widget.authToken!.isNotEmpty) {
+        _cachedToken = widget.authToken;
+      } else {
+        final prefs = await SharedPreferences.getInstance();
+        _cachedToken = prefs.getString('authToken') ?? '';
+      }
+      
+      if (mounted) {
+        setState(() {});
+      }
+    } catch (e) {
+      print("Error loading cached token: $e");
+      _cachedToken = '';
+    }
   }
 
   String? _validateAmount(String? value) {
@@ -87,18 +113,24 @@ class _WithdrawDialogState extends State<WithdrawDialog> {
       });
 
       try {
-        String? authToken = widget.authToken; 
-        
+        // Ensuring we have the latest token
+        if (_cachedToken == null || _cachedToken!.isEmpty) {
+          await _loadCachedToken();
+        }
+
+        String? authToken = _cachedToken;
+
         if (authToken == null || authToken.isEmpty) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Authentication error. Please login again.'),
+              content: Text('Session expired. Please login again.'),
               backgroundColor: Colors.red,
             ),
           );
           setState(() {
             _isProcessing = false;
           });
+          Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
           return;
         }
 
@@ -123,12 +155,27 @@ class _WithdrawDialogState extends State<WithdrawDialog> {
           });
         }
       } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Withdrawal failed: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        if (e.toString().contains('401') || e.toString().contains('Unauthorized') || 
+            e.toString().contains('Invalid/Expired token')) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Session expired. Please login again.'),
+              backgroundColor: Colors.red,
+            ),
+          );
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.remove('authToken');
+          await prefs.setBool('isLoggedIn', false);
+          
+          Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Withdrawal failed: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
         setState(() {
           _isProcessing = false;
         });
