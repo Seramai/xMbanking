@@ -45,13 +45,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Uint8List? _cachedImageBytes;
   File? _cachedImageFile;
   String? _cachedEmail;
+  bool _isRefreshing = false;
 
   @override
   void initState() {
     super.initState();
     _initializeData();
   }
-
   void _initializeData() {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await _loadRegistrationDataFromCache();
@@ -105,7 +105,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
       }
     });
   }
-
   Future<void> _refreshDashboardOnInit(String authToken) async {
     try {
       final response = await ApiService.refreshDashboard(token: authToken);
@@ -125,7 +124,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
       await _loadStoredData();
     }
   }
-
   void _loadCurrencyFromLoginData() {
     if (_loginData != null) {
       Map<String, dynamic> actualData;
@@ -145,7 +143,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
       });
     }
   }
-
   void _loadApiData() {
     if (_loginData == null) {
       return;
@@ -158,23 +155,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
       actualData = _loginData!;
     }
     final balance = actualData['balance'];
-    
     if (balance != null && balance['Balance'] != null) {
       final newBalance = balance['Balance'].toDouble();
       setState(() {
         _accountBalance = newBalance;
       });
     }
-    
     final statements = actualData['statement'] as List<dynamic>?;
-    
     if (statements != null) {
       setState(() {
         _apiTransactions = statements;
         _updateMiniStatement();
       });
     }
-    
     if (actualData['Name'] != null) {
       setState(() {
         _apiUsername = actualData['Name'];
@@ -183,7 +176,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     
     _loadCurrencyFromLoginData();
   }
-
   Future<void> _loadRegistrationDataFromCache() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -216,7 +208,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
       setState(() {
         _cachedEmail = cachedEmail;
         _apiUsername = cachedUsername ?? _apiUsername;
-        
         if (cachedImageBytes != null) {
           try {
             _cachedImageBytes = base64Decode(cachedImageBytes);
@@ -224,7 +215,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
             print("Error decoding cached image bytes: $e");
           }
         }
-        
         if (cachedImagePath != null && !kIsWeb) {
           _cachedImageFile = File(cachedImagePath);
         }
@@ -233,7 +223,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
       print("Error loading registration data from cache: $e");
     }
   }
-
   Future<void> _loadStoredData() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -249,8 +238,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
       print('Error loading stored data: $e');
     }
   }
-
   Future<void> _refreshDashboard() async {
+    if (_isRefreshing) return;
+    
+    setState(() {
+      _isRefreshing = true;
+    });
+
     try {
       String? authToken;
       if (_loginData != null && _loginData!['data'] != null) {
@@ -284,26 +278,33 @@ class _DashboardScreenState extends State<DashboardScreen> {
       if (e.toString().contains('401') || e.toString().contains('Unauthorized')) {
         _handleSessionExpired();
       }
+    } finally {
+      setState(() {
+        _isRefreshing = false;
+      });
     }
   }
-
   void _handleSessionExpired() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Your session has expired. Please login again.'),
-        backgroundColor: Colors.red,
-        duration: Duration(seconds: 3),
-      ),
-    );
-    Future.delayed(const Duration(seconds: 1), () {
-      Navigator.pushNamedAndRemoveUntil(
-        context,
-        '/login',
-        (route) => false,
+    if (mounted && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Your session has expired. Please login again.'),
+          backgroundColor: Colors.red,
+          duration: Duration(seconds: 3),
+        ),
       );
+    }
+    
+    Future.delayed(const Duration(seconds: 1), () {
+      if (mounted && context.mounted) {
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          '/login',
+          (route) => false,
+        );
+      }
     });
   }
-
   void _updateMiniStatement() {
     List<Transaction> apiTransactions = _apiTransactions.map((txn) {
       double amount = txn['Amount']?.toDouble() ?? 0.0;
@@ -327,16 +328,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
       } catch (e) {
         print('Date parsing error: $e');
       }
-      
-      TransactionType type = amount >= 0 ? TransactionType.credit : TransactionType.debit;
+      TransactionType type;
+      if (description.toLowerCase().contains('deposit')) {
+        type = TransactionType.credit;
+      } else if (description.toLowerCase().contains('withdrawal') || description.toLowerCase().contains('withdraw')) {
+        type = TransactionType.debit; 
+      } else {
+        type = amount >= 0 ? TransactionType.credit : TransactionType.debit;
+      }
       IconData icon = Icons.account_balance;
-      
       if (description.toLowerCase().contains('deposit')) {
         icon = Icons.add_circle_outline;
       } else if (description.toLowerCase().contains('interest')) {
         icon = Icons.trending_up;
       } else if (description.toLowerCase().contains('repayment')) {
         icon = Icons.payment;
+      } else if (description.toLowerCase().contains('withdrawal') || description.toLowerCase().contains('withdraw')) {
+        icon = Icons.remove_circle_outline;
       }
       
       return Transaction(
@@ -347,11 +355,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
         icon: icon,
       );
     }).toList();
-    
     apiTransactions.sort((a, b) => b.date.compareTo(a.date));
     _miniStatement = apiTransactions.take(5).toList();
   }
-
   String get _lastLoginTime {
     if (_loginData != null) {
       Map<String, dynamic>? actualData;
@@ -376,18 +382,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
         }
       }
     }
-    
     final now = DateTime.now();
     final lastLogin = now.subtract(const Duration(hours: 2, minutes: 18));
     return DateFormat('dd MMMM yyyy, HH:mm').format(lastLogin);
   }
-
   void _toggleBalance() {
     setState(() {
       _isBalanceVisible = !_isBalanceVisible;
     });
   }
-
   void _navigateToProfile() {
     String? authToken;
     Map<String, dynamic>? loginData;
@@ -434,6 +437,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       final actualData = _loginData!['data'] as Map<String, dynamic>;
       authToken = actualData['Token']; 
     }
+    
     if (authToken == null || authToken.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -443,6 +447,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       );
       return;
     }
+    
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -450,49 +455,39 @@ class _DashboardScreenState extends State<DashboardScreen> {
           authToken: authToken!,
           lockedPhoneNumber: _userMobileNumber ?? widget.username,
           currencyCode: _currentCurrencyCode,
-          onDepositSuccess: (double amount, String phoneNumber) {
-            setState(() {
-              _accountBalance += amount;
-              _miniStatement.insert(0, Transaction(
-                date: DateTime.now(),
-                description: "Mobile Deposit",
-                amount: amount,
-                type: TransactionType.credit,
-                icon: Icons.phone_android,
-              ));
-              if (_miniStatement.length > 5) {
-                _miniStatement.removeRange(5, _miniStatement.length);
-              }
-            });
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Row(
-                  children: [
-                    const Icon(Icons.check_circle, color: Colors.white),
-                    const SizedBox(width: 8),
-                    Text('Successfully deposited $_currentCurrencyCode ${amount.toStringAsFixed(2)}'),
-                  ],
+          onDepositSuccess: (double amount, String phoneNumber) async {
+            await _refreshDashboard();
+            if (mounted && context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Row(
+                    children: [
+                      const Icon(Icons.check_circle, color: Colors.white),
+                      const SizedBox(width: 8),
+                      Text('Successfully deposited $_currentCurrencyCode ${amount.toStringAsFixed(2)}'),
+                    ],
+                  ),
+                  backgroundColor: Colors.green,
+                  behavior: SnackBarBehavior.floating,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  duration: const Duration(seconds: 3),
                 ),
-                backgroundColor: Colors.green,
-                behavior: SnackBarBehavior.floating,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                duration: const Duration(seconds: 3),
-              ),
-            );
+              );
+            }
           },
         );
       },
     );
   }
-
   void _handleWithdraw() {
     String? authToken;
     if (_loginData != null && _loginData!['data'] != null) {
       final actualData = _loginData!['data'] as Map<String, dynamic>;
       authToken = actualData['Token']; 
     }
+    
     if (authToken == null || authToken.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -511,46 +506,34 @@ class _DashboardScreenState extends State<DashboardScreen> {
           authToken: authToken!,
           lockedPhoneNumber: _userMobileNumber ?? widget.username,
           currencyCode: _currentCurrencyCode,
-          onWithdrawSuccess: (double amount, String phoneNumber) {
-            setState(() {
-              _accountBalance -= amount;
-              _miniStatement.insert(0, Transaction(
-                date: DateTime.now(),
-                description: "Mobile Withdrawal",
-                amount: -amount,
-                type: TransactionType.debit,
-                icon: Icons.phone_android,
-              ));
-              if (_miniStatement.length > 5) {
-                _miniStatement.removeRange(5, _miniStatement.length);
-              }
-            });
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Row(
-                  children: [
-                    const Icon(Icons.check_circle, color: Colors.white),
-                    const SizedBox(width: 8),
-                    Text('Successfully withdrew $_currentCurrencyCode ${amount.toStringAsFixed(2)}'),
-                  ],
+          onWithdrawSuccess: (double amount, String phoneNumber) async {
+            await _refreshDashboard();
+            if (mounted && context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Row(
+                    children: [
+                      const Icon(Icons.check_circle, color: Colors.white),
+                      const SizedBox(width: 8),
+                      Text('Successfully withdrew $_currentCurrencyCode ${amount.toStringAsFixed(2)}'),
+                    ],
+                  ),
+                  backgroundColor: Colors.orange,
+                  behavior: SnackBarBehavior.floating,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  duration: const Duration(seconds: 3),
                 ),
-                backgroundColor: Colors.orange,
-                behavior: SnackBarBehavior.floating,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                duration: const Duration(seconds: 3),
-              ),
-            );
+              );
+            }
           },
         );
       },
     );
   }
-
   void _viewFullStatement() {
   }
-
   Widget _buildProfileImage() {
     if (widget.profileImageBytes != null) {
       return Image.memory(
@@ -760,7 +743,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         children: [
                           Expanded(
                             child: ElevatedButton.icon(
-                              onPressed: _handleDeposit,
+                              onPressed: _isRefreshing ? null : _handleDeposit,
                               icon: const Icon(Icons.add_circle_outline),
                               label: const Text('Deposit'),
                               style: ElevatedButton.styleFrom(
@@ -777,7 +760,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           const SizedBox(width: 16),
                           Expanded(
                             child: ElevatedButton.icon(
-                              onPressed: _handleWithdraw,
+                              onPressed: _isRefreshing ? null : _handleWithdraw,
                               icon: const Icon(Icons.remove_circle_outline),
                               label: const Text('Withdraw'),
                               style: ElevatedButton.styleFrom(
@@ -936,7 +919,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   crossAxisAlignment: CrossAxisAlignment.end,
                                   children: [
                                     Text(
-                                      '${transaction.amount >= 0 ? '+' : ''}$_currentCurrencyCode ${NumberFormat("#,##0.00").format(transaction.amount.abs())}',
+                                      '${transaction.type == TransactionType.credit ? '+' : '-'}$_currentCurrencyCode ${NumberFormat("#,##0.00").format(transaction.amount.abs())}',
                                       style: TextStyle(
                                         color: transaction.type == TransactionType.credit
                                             ? Colors.green
@@ -1005,7 +988,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                     icon: Icons.phone_android,
                                     title: 'Mobile Money',
                                     color: const Color(0xFF1A237E).withOpacity(0.8),
-                                    onTap: () {},
+                                    onTap: () {
+                                    },
                                   ),
                                 ),
                                 const SizedBox(width: 16),
@@ -1034,7 +1018,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ),
     );
   }
-
   Widget _buildQuickActionItem({
     required IconData icon,
     required String title,
@@ -1085,7 +1068,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
 }
 
 enum TransactionType { credit, debit }
-
 class Transaction {
   final DateTime date;
   final String description;
