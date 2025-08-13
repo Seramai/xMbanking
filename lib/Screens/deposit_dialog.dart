@@ -2,18 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../Services/api_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../Services/currency_service.dart';
 
 class DepositDialog extends StatefulWidget {
   final Function(double amount, String phoneNumber) onDepositSuccess;
   final String authToken;
-  final String? lockedPhoneNumber; 
+  final String? lockedPhoneNumber;
+  final String currencyCode;
 
   const DepositDialog({
     super.key,
     required this.onDepositSuccess,
     required this.authToken,
     this.lockedPhoneNumber,
+    required this.currencyCode,
   });
 
   @override
@@ -26,26 +27,21 @@ class _DepositDialogState extends State<DepositDialog> {
   final _phoneController = TextEditingController();
   final _remarksController = TextEditingController();
   bool _isProcessing = false;
-  String _currentCurrency = '';
-  String _currentCurrencySymbol = '';
+  String _currentCurrencyCode = '';
 
   @override
   void initState() {
     super.initState();
-    _loadCurrency();
+    _currentCurrencyCode = widget.currencyCode;
     
     if (widget.lockedPhoneNumber != null && widget.lockedPhoneNumber!.isNotEmpty) {
       String phoneNumber = widget.lockedPhoneNumber!;
       if (_isValidPhoneFormat(phoneNumber)) {
         _phoneController.text = phoneNumber;
-        print("Deposit Dialog - Locked phone number set: $phoneNumber");
-      } else {
-        print("Deposit Dialog - Invalid phone format: $phoneNumber");
       }
-    } else {
-      print("Deposit Dialog - No locked phone number provided");
     }
   }
+
   bool _isValidPhoneFormat(String phone) {
     String cleanedPhone = phone.replaceAll(RegExp(r'[^\d]'), '');
     return (cleanedPhone.startsWith('254') && cleanedPhone.length == 12) ||
@@ -60,17 +56,6 @@ class _DepositDialogState extends State<DepositDialog> {
     _remarksController.dispose();
     super.dispose();
   }
-  Future<void> _loadCurrency() async {
-    final currency = await CurrencyService.getCurrency() ?? '';
-    final currencySymbol = await CurrencyService.getCurrencySymbol();
-    
-    if (mounted) {
-      setState(() {
-        _currentCurrency = currency;
-        _currentCurrencySymbol = currencySymbol;
-      });
-    }
-  }
 
   String? _validateAmount(String? value) {
     if (value == null || value.isEmpty) {
@@ -81,10 +66,10 @@ class _DepositDialogState extends State<DepositDialog> {
       return 'Please enter a valid amount';
     }
     if (amount < 10) {
-      return 'Minimum deposit amount is $_currentCurrencySymbol 10';
+      return 'Minimum deposit amount is $_currentCurrencyCode 10';
     }
     if (amount > 15000000) {
-      return 'Maximum deposit amount is $_currentCurrencySymbol 15,000,000';
+      return 'Maximum deposit amount is $_currentCurrencyCode 15,000,000';
     }
     return null;
   }
@@ -93,7 +78,6 @@ class _DepositDialogState extends State<DepositDialog> {
     if (value == null || value.isEmpty) {
       return 'Please enter phone number';
     }
-    // Remove any spaces or special characters
     String cleanedPhone = value.replaceAll(RegExp(r'[^\d]'), '');
     if (cleanedPhone.startsWith('254') && cleanedPhone.length == 12) {
       return null;
@@ -128,7 +112,6 @@ class _DepositDialogState extends State<DepositDialog> {
         String? authToken = widget.authToken;
 
         if (authToken.isEmpty) {
-          //getting token from cache
           final prefs = await SharedPreferences.getInstance();
           authToken = prefs.getString('authToken') ?? '';
           
@@ -187,6 +170,7 @@ class _DepositDialogState extends State<DepositDialog> {
         return StkPushDialog(
           amount: double.parse(_amountController.text),
           phoneNumber: _formatPhoneNumber(_phoneController.text),
+          currencyCode: _currentCurrencyCode,
           onSuccess: () {
             Navigator.of(context).pop();
             Navigator.of(context).pop();
@@ -213,286 +197,286 @@ class _DepositDialogState extends State<DepositDialog> {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
       ),
-      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24), 
-      child: Container( 
-      width: double.infinity,
-      constraints: BoxConstraints(
-      maxHeight: MediaQuery.of(context).size.height * 0.9, 
-      maxWidth: 400,
-      ),
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Icon(
-                      Icons.add_circle_outline,
-                      color: Theme.of(context).primaryColor,
-                      size: 24,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  const Text(
-                    'Deposit Money',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const Spacer(),
-                  IconButton(
-                    onPressed: _isProcessing ? null : () => Navigator.of(context).pop(),
-                    icon: const Icon(Icons.close),
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 24),
-              Text(
-                'Amount ($_currentCurrencySymbol)',
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.grey,
-                ),
-              ),
-              const SizedBox(height: 8),
-              TextFormField(
-                controller: _amountController,
-                keyboardType: TextInputType.number,
-                inputFormatters: [
-                  FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}')),
-                ],
-                decoration: InputDecoration(
-                  hintText: 'Enter amount',
-                  prefixText: '$_currentCurrencySymbol ',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: Colors.grey.shade300),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: Colors.grey.shade300),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: Theme.of(context).primaryColor),
-                  ),
-                  filled: true,
-                  fillColor: Colors.grey.shade50,
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 16,
-                  ),
-                ),
-                validator: _validateAmount,
-                enabled: !_isProcessing,
-              ),
-              const SizedBox(height: 20),
-              const Text(
-                'Phone Number',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.grey,
-                ),
-              ),
-              const SizedBox(height: 8),
-              TextFormField(
-                controller: _phoneController,
-                keyboardType: TextInputType.phone,
-                inputFormatters: [
-                  FilteringTextInputFormatter.digitsOnly,
-                  LengthLimitingTextInputFormatter(12),
-                ],
-                decoration: InputDecoration(
-                  hintText: widget.lockedPhoneNumber == null 
-                      ? '0712345678 or 254712345678'
-                      : null,
-                  prefixIcon: Icon(
-                    Icons.phone_android,
-                    color: widget.lockedPhoneNumber != null 
-                        ? Colors.grey.shade500 
-                        : null,
-                  ),
-                  suffixIcon: widget.lockedPhoneNumber != null 
-                      ? Icon(Icons.lock, color: Colors.grey.shade500) 
-                      : null,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(
-                      color: widget.lockedPhoneNumber != null 
-                          ? Colors.grey.shade400 
-                          : Colors.grey.shade300,
-                    ),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(
-                      color: widget.lockedPhoneNumber != null 
-                          ? Colors.grey.shade400 
-                          : Colors.grey.shade300,
-                    ),
-                  ),
-                  disabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: Colors.grey.shade400),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: Theme.of(context).primaryColor),
-                  ),
-                  filled: true,
-                  fillColor: widget.lockedPhoneNumber != null 
-                      ? Colors.grey.shade200
-                      : Colors.grey.shade50,
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 16,
-                  ),
-                ),
-                style: TextStyle(
-                  color: widget.lockedPhoneNumber != null 
-                      ? Colors.grey.shade700
-                      : Colors.black,
-                  fontWeight: widget.lockedPhoneNumber != null 
-                      ? FontWeight.w500 
-                      : FontWeight.normal,
-                ),
-                validator: _validatePhone,
-                enabled: (widget.lockedPhoneNumber == null || 
-                          widget.lockedPhoneNumber!.isEmpty || 
-                          !_isValidPhoneFormat(widget.lockedPhoneNumber!)) && !_isProcessing,
-                ),
-              const SizedBox(height: 20),
-              const Text(
-                'Remarks (Optional)',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.grey,
-                ),
-              ),
-              const SizedBox(height: 8),
-              TextFormField(
-                controller: _remarksController,
-                decoration: InputDecoration(
-                  hintText: 'Enter remarks for this deposit',
-                  prefixIcon: const Icon(Icons.note),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: Colors.grey.shade300),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: Colors.grey.shade300),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: Theme.of(context).primaryColor),
-                  ),
-                  filled: true,
-                  fillColor: Colors.grey.shade50,
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 16,
-                  ),
-                ),
-                enabled: !_isProcessing,
-                maxLines: 2,
-                maxLength: 100,
-              ),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _isProcessing ? null : _processDeposit,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Theme.of(context).primaryColor,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    elevation: 2,
-                  ),
-                  child: _isProcessing
-                      ? Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(
-                                  Colors.white,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            const Text(
-                              'Processing...',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        )
-                      : const Text(
-                          'Process Deposit',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.blue.shade50,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.blue.shade200),
-                ),
-                child: Row(
+      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+      child: Container(
+        width: double.infinity,
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.9,
+          maxWidth: 400,
+        ),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
                   children: [
-                    Icon(
-                      Icons.info_outline,
-                      color: Colors.blue.shade700,
-                      size: 20,
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'You will receive an notification on your phone to complete the transaction.',
-                        style: TextStyle(
-                          color: Colors.blue.shade700,
-                          fontSize: 12,
-                        ),
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(8),
                       ),
+                      child: Icon(
+                        Icons.add_circle_outline,
+                        color: Theme.of(context).primaryColor,
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    const Text(
+                      'Deposit Money',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const Spacer(),
+                    IconButton(
+                      onPressed: _isProcessing ? null : () => Navigator.of(context).pop(),
+                      icon: const Icon(Icons.close),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
                     ),
                   ],
                 ),
-              ),
-            ],
+                const SizedBox(height: 24),
+                Text(
+                  'Amount ($_currentCurrencyCode)',
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.grey,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                TextFormField(
+                  controller: _amountController,
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}')),
+                  ],
+                  decoration: InputDecoration(
+                    hintText: 'Enter amount',
+                    prefixText: '$_currentCurrencyCode ',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Colors.grey.shade300),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Colors.grey.shade300),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Theme.of(context).primaryColor),
+                    ),
+                    filled: true,
+                    fillColor: Colors.grey.shade50,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 16,
+                    ),
+                  ),
+                  validator: _validateAmount,
+                  enabled: !_isProcessing,
+                ),
+                const SizedBox(height: 20),
+                const Text(
+                  'Phone Number',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.grey,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                TextFormField(
+                  controller: _phoneController,
+                  keyboardType: TextInputType.phone,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                    LengthLimitingTextInputFormatter(12),
+                  ],
+                  decoration: InputDecoration(
+                    hintText: widget.lockedPhoneNumber == null 
+                        ? '0712345678 or 254712345678'
+                        : null,
+                    prefixIcon: Icon(
+                      Icons.phone_android,
+                      color: widget.lockedPhoneNumber != null 
+                          ? Colors.grey.shade500 
+                          : null,
+                    ),
+                    suffixIcon: widget.lockedPhoneNumber != null 
+                        ? Icon(Icons.lock, color: Colors.grey.shade500) 
+                        : null,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(
+                        color: widget.lockedPhoneNumber != null 
+                            ? Colors.grey.shade400 
+                            : Colors.grey.shade300,
+                      ),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(
+                        color: widget.lockedPhoneNumber != null 
+                            ? Colors.grey.shade400 
+                            : Colors.grey.shade300,
+                      ),
+                    ),
+                    disabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Colors.grey.shade400),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Theme.of(context).primaryColor),
+                    ),
+                    filled: true,
+                    fillColor: widget.lockedPhoneNumber != null 
+                        ? Colors.grey.shade200
+                        : Colors.grey.shade50,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 16,
+                    ),
+                  ),
+                  style: TextStyle(
+                    color: widget.lockedPhoneNumber != null 
+                        ? Colors.grey.shade700
+                        : Colors.black,
+                    fontWeight: widget.lockedPhoneNumber != null 
+                        ? FontWeight.w500 
+                        : FontWeight.normal,
+                  ),
+                  validator: _validatePhone,
+                  enabled: (widget.lockedPhoneNumber == null || 
+                            widget.lockedPhoneNumber!.isEmpty || 
+                            !_isValidPhoneFormat(widget.lockedPhoneNumber!)) && !_isProcessing,
+                ),
+                const SizedBox(height: 20),
+                const Text(
+                  'Remarks (Optional)',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.grey,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                TextFormField(
+                  controller: _remarksController,
+                  decoration: InputDecoration(
+                    hintText: 'Enter remarks for this deposit',
+                    prefixIcon: const Icon(Icons.note),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Colors.grey.shade300),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Colors.grey.shade300),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Theme.of(context).primaryColor),
+                    ),
+                    filled: true,
+                    fillColor: Colors.grey.shade50,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 16,
+                    ),
+                  ),
+                  enabled: !_isProcessing,
+                  maxLines: 2,
+                  maxLength: 100,
+                ),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: _isProcessing ? null : _processDeposit,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Theme.of(context).primaryColor,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation: 2,
+                    ),
+                    child: _isProcessing
+                        ? Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    Colors.white,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              const Text(
+                                'Processing...',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          )
+                        : const Text(
+                            'Process Deposit',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.blue.shade200),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.info_outline,
+                        color: Colors.blue.shade700,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'You will receive an notification on your phone to complete the transaction.',
+                          style: TextStyle(
+                            color: Colors.blue.shade700,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
-      ),
       ),
     );
   }
@@ -501,6 +485,7 @@ class _DepositDialogState extends State<DepositDialog> {
 class StkPushDialog extends StatefulWidget {
   final double amount;
   final String phoneNumber;
+  final String currencyCode;
   final VoidCallback onSuccess;
   final VoidCallback onCancel;
 
@@ -508,6 +493,7 @@ class StkPushDialog extends StatefulWidget {
     super.key,
     required this.amount,
     required this.phoneNumber,
+    required this.currencyCode,
     required this.onSuccess,
     required this.onCancel,
   });
@@ -545,7 +531,6 @@ class _StkPushDialogState extends State<StkPushDialog>
 
     _animationController.repeat(reverse: true);
     _startCountdown();
-    // Simulating successful transaction after 5 seconds
     Future.delayed(const Duration(seconds: 5), () {
       if (mounted) {
         _showSuccessMessage();
@@ -613,19 +598,13 @@ class _StkPushDialogState extends State<StkPushDialog>
                   ),
                 ),
                 const SizedBox(height: 8),
-                FutureBuilder<String>(
-                  future: CurrencyService.getCurrencySymbol(),
-                  builder: (context, snapshot) {
-                    final symbol = snapshot.data ?? '';
-                    return Text(
-                      '$symbol ${widget.amount.toStringAsFixed(2)} has been deposited to your account.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: Colors.grey.shade600,
-                        fontSize: 14,
-                      ),
-                    );
-                  },
+                Text(
+                  '${widget.currencyCode} ${widget.amount.toStringAsFixed(2)} has been deposited to your account.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Colors.grey.shade600,
+                    fontSize: 14,
+                  ),
                 ),
                 const SizedBox(height: 24),
                 SizedBox(
@@ -713,7 +692,7 @@ class _StkPushDialogState extends State<StkPushDialog>
               child: Column(
                 children: [
                   Text(
-                    'Amount: KES ${widget.amount.toStringAsFixed(2)}',
+                    'Amount: ${widget.currencyCode} ${widget.amount.toStringAsFixed(2)}',
                     style: const TextStyle(fontWeight: FontWeight.w500),
                   ),
                   Text(

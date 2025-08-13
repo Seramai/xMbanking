@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter/foundation.dart';
 import 'user_profile_screen.dart';
@@ -9,16 +10,13 @@ import 'dart:typed_data';
 import 'deposit_dialog.dart';
 import 'withdraw_dialog.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:convert'; 
-import '../Services/currency_service.dart';
-
+import 'dart:convert';
 
 class DashboardScreen extends StatefulWidget {
   final String username;
   final String email;
   final File? profileImageFile;
   final Uint8List? profileImageBytes;
-  
   
   const DashboardScreen({
     super.key,
@@ -36,79 +34,67 @@ class _DashboardScreenState extends State<DashboardScreen> {
   bool _isBalanceVisible = true;
   double _accountBalance = 0.0;
   String? _apiUsername;
-  String _currentCurrency = '';
+  String _currentCurrencyCode = '';
   String _currentCurrencySymbol = '';
   String? _userMobileNumber;
   final int _numberOfAccounts = 2;
   final int _notificationCount = 3;
-  // they are varibales that will store the api responses
   Map<String, dynamic>? _loginData;
   List<dynamic> _apiTransactions = [];
   List<Transaction> _miniStatement = [];
   Uint8List? _cachedImageBytes;
   File? _cachedImageFile;
   String? _cachedEmail;
-    @override
+
+  @override
   void initState() {
     super.initState();
     _initializeData();
-    _loadCurrency();
   }
-  Future<void> _loadCurrency() async {
-    final currency = await CurrencyService.getCurrency() ?? '';
-    final currencySymbol = await CurrencyService.getCurrencySymbol();
-    
-    if (mounted) {
-      setState(() {
-        _currentCurrency = currency;
-        _currentCurrencySymbol = currencySymbol;
-      });
-    }
-  }
+
   void _initializeData() {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      // Loading cached registration data first
       await _loadRegistrationDataFromCache();
       
       final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
       
       if (args != null) {
         if (args['loginData'] != null) {
-        setState(() {
-          _loginData = args['loginData'];
-          String? extractedPhoneFromToken;
-          try {
-            if (args['loginData']?['data']?['Token'] != null) {
-              String token = args['loginData']['data']['Token'];
-              List<String> parts = token.split('.');
-              if (parts.length == 3) {
-                String payload = parts[1];
-                while (payload.length % 4 != 0) {
-                  payload += '=';
+          setState(() {
+            _loginData = args['loginData'];
+            String? extractedPhoneFromToken;
+            try {
+              if (args['loginData']?['data']?['Token'] != null) {
+                String token = args['loginData']['data']['Token'];
+                List<String> parts = token.split('.');
+                if (parts.length == 3) {
+                  String payload = parts[1];
+                  while (payload.length % 4 != 0) {
+                    payload += '=';
+                  }
+                  String decoded = utf8.decode(base64.decode(payload));
+                  Map<String, dynamic> tokenData = json.decode(decoded);
+                  extractedPhoneFromToken = tokenData['UserName']; 
                 }
-                String decoded = utf8.decode(base64.decode(payload));
-                Map<String, dynamic> tokenData = json.decode(decoded);
-                extractedPhoneFromToken = tokenData['UserName']; 
               }
+            } catch (e) {
+              print("Dashboard - Error extracting phone from token: $e");
             }
-          } catch (e) {
-            print("Dashboard - Error extracting phone from token: $e");
-          }
-          _userMobileNumber = extractedPhoneFromToken ?? 
-                            args['mobileNumber'] ?? 
-                            args['phoneNumber'] ?? 
-                            widget.username;
+            _userMobileNumber = extractedPhoneFromToken ?? 
+                              args['mobileNumber'] ?? 
+                              args['phoneNumber'] ?? 
+                              widget.username;
             if (args['loginData']?['data'] != null) {
               print("Dashboard - Available data keys: ${args['loginData']['data'].keys}");
             }
             if (args['useStoredData'] == true || 
-            _loginData?['needsRefresh'] == true ||
-            _loginData?['data']?['balance'] == null) {
-          _refreshDashboardOnInit(args['authToken'] ?? _loginData?['data']?['Token'] ?? '');
-        } else {
-          _loadApiData();
-        }
-      });
+                _loginData?['needsRefresh'] == true ||
+                _loginData?['data']?['balance'] == null) {
+              _refreshDashboardOnInit(args['authToken'] ?? _loginData?['data']?['Token'] ?? '');
+            } else {
+              _loadApiData();
+            }
+          });
         }
         else if (args['authToken'] != null) {
           _userMobileNumber = args['mobileNumber'];
@@ -119,6 +105,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       }
     });
   }
+
   Future<void> _refreshDashboardOnInit(String authToken) async {
     try {
       final response = await ApiService.refreshDashboard(token: authToken);
@@ -139,8 +126,27 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
+  void _loadCurrencyFromLoginData() {
+    if (_loginData != null) {
+      Map<String, dynamic> actualData;
+      
+      if (_loginData!['data'] != null) {
+        actualData = _loginData!['data'] as Map<String, dynamic>;
+      } else {
+        actualData = _loginData!;
+      }
+      
+      final currencyCode = actualData['CurrencyCode'] ?? '';
+      final currencySymbol = currencyCode;
+      
+      setState(() {
+        _currentCurrencyCode = currencyCode;
+        _currentCurrencySymbol = currencySymbol;
+      });
+    }
+  }
+
   void _loadApiData() {
-    
     if (_loginData == null) {
       return;
     }
@@ -158,8 +164,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
       setState(() {
         _accountBalance = newBalance;
       });
-    } else {
     }
+    
     final statements = actualData['statement'] as List<dynamic>?;
     
     if (statements != null) {
@@ -167,16 +173,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
         _apiTransactions = statements;
         _updateMiniStatement();
       });
-    } else {
     }
+    
     if (actualData['Name'] != null) {
       setState(() {
         _apiUsername = actualData['Name'];
       });
-    } else {
-      print("No name found in data");
     }
+    
+    _loadCurrencyFromLoginData();
   }
+
   Future<void> _loadRegistrationDataFromCache() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -222,8 +229,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
           _cachedImageFile = File(cachedImagePath);
         }
       });
-      
-      print("Cached data loaded - Email: $cachedEmail, Username: $cachedUsername, HasImage: ${_cachedImageBytes != null || _cachedImageFile != null}");
     } catch (e) {
       print("Error loading registration data from cache: $e");
     }
@@ -244,10 +249,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
       print('Error loading stored data: $e');
     }
   }
-      // handles pull to refresh functionality
+
   Future<void> _refreshDashboard() async {
     try {
-      // Extract auth token
       String? authToken;
       if (_loginData != null && _loginData!['data'] != null) {
         final actualData = _loginData!['data'] as Map<String, dynamic>;
@@ -257,7 +261,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       if (authToken == null || authToken.isEmpty) {
         return;
       }
-      // Call the refresh API
+      
       final response = await ApiService.refreshDashboard(token: authToken);
       
       if (response['success']) {
@@ -269,13 +273,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
           }
           _loadApiData();
         });
-        
       } else {
         if (response['message'].toString().toLowerCase().contains('unauthorized') || 
-          response['message'].toString().toLowerCase().contains('token') ||
-          response['message'].toString().toLowerCase().contains('expired')) {
-        _handleSessionExpired();
-      }
+            response['message'].toString().toLowerCase().contains('token') ||
+            response['message'].toString().toLowerCase().contains('expired')) {
+          _handleSessionExpired();
+        }
       }
     } catch (e) {
       if (e.toString().contains('401') || e.toString().contains('Unauthorized')) {
@@ -283,22 +286,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
       }
     }
   }
+
   void _handleSessionExpired() {
-  ScaffoldMessenger.of(context).showSnackBar(
-    const SnackBar(
-      content: Text('Your session has expired. Please login again.'),
-      backgroundColor: Colors.red,
-      duration: Duration(seconds: 3),
-    ),
-  );
-  Future.delayed(const Duration(seconds: 1), () {
-    Navigator.pushNamedAndRemoveUntil(
-      context,
-      '/login',
-      (route) => false,
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Your session has expired. Please login again.'),
+        backgroundColor: Colors.red,
+        duration: Duration(seconds: 3),
+      ),
     );
-  });
-}
+    Future.delayed(const Duration(seconds: 1), () {
+      Navigator.pushNamedAndRemoveUntil(
+        context,
+        '/login',
+        (route) => false,
+      );
+    });
+  }
 
   void _updateMiniStatement() {
     List<Transaction> apiTransactions = _apiTransactions.map((txn) {
@@ -306,16 +310,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
       String description = txn['Description'] ?? 'Transaction';
       
       DateTime date = DateTime.now();
-        try {
-          if (txn['TrxDate'] != null) {
-            String dateString = txn['TrxDate'].toString();
-            List<String> parts = dateString.split(' ');
+      try {
+        if (txn['TrxDate'] != null) {
+          String dateString = txn['TrxDate'].toString();
+          List<String> parts = dateString.split(' ');
           if (parts.length == 2) {
             List<String> dateParts = parts[0].split('/');
             String timePart = parts[1];
             
             if (dateParts.length == 3) {
-              // Converting MM/dd/yyyy to yyyy-MM-dd format
               String isoDate = '${dateParts[2]}-${dateParts[0].padLeft(2, '0')}-${dateParts[1].padLeft(2, '0')}T$timePart';
               date = DateTime.parse(isoDate);
             }
@@ -348,6 +351,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     apiTransactions.sort((a, b) => b.date.compareTo(a.date));
     _miniStatement = apiTransactions.take(5).toList();
   }
+
   String get _lastLoginTime {
     if (_loginData != null) {
       Map<String, dynamic>? actualData;
@@ -383,6 +387,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       _isBalanceVisible = !_isBalanceVisible;
     });
   }
+
   void _navigateToProfile() {
     String? authToken;
     Map<String, dynamic>? loginData;
@@ -414,7 +419,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-
   void _navigateToNotifications() {
     Navigator.push(
       context,
@@ -424,12 +428,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-    void _handleDeposit() {
+  void _handleDeposit() {
     String? authToken;
-     if (_loginData != null && _loginData!['data'] != null) {
-        final actualData = _loginData!['data'] as Map<String, dynamic>;
-        authToken = actualData['Token']; 
-      }
+    if (_loginData != null && _loginData!['data'] != null) {
+      final actualData = _loginData!['data'] as Map<String, dynamic>;
+      authToken = actualData['Token']; 
+    }
     if (authToken == null || authToken.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -444,7 +448,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
       builder: (BuildContext context) {
         return DepositDialog(
           authToken: authToken!,
-          lockedPhoneNumber: _userMobileNumber ?? widget.username, 
+          lockedPhoneNumber: _userMobileNumber ?? widget.username,
+          currencyCode: _currentCurrencyCode,
           onDepositSuccess: (double amount, String phoneNumber) {
             setState(() {
               _accountBalance += amount;
@@ -465,7 +470,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   children: [
                     const Icon(Icons.check_circle, color: Colors.white),
                     const SizedBox(width: 8),
-                    Text('Successfully deposited $_currentCurrencySymbol ${amount.toStringAsFixed(2)}'),
+                    Text('Successfully deposited $_currentCurrencyCode ${amount.toStringAsFixed(2)}'),
                   ],
                 ),
                 backgroundColor: Colors.green,
@@ -481,7 +486,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
       },
     );
   }
-    void _handleWithdraw() {
+
+  void _handleWithdraw() {
     String? authToken;
     if (_loginData != null && _loginData!['data'] != null) {
       final actualData = _loginData!['data'] as Map<String, dynamic>;
@@ -503,16 +509,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
         return WithdrawDialog(
           currentBalance: _accountBalance,
           authToken: authToken!,
-          lockedPhoneNumber: _userMobileNumber ?? widget.username, 
+          lockedPhoneNumber: _userMobileNumber ?? widget.username,
+          currencyCode: _currentCurrencyCode,
           onWithdrawSuccess: (double amount, String phoneNumber) {
             setState(() {
               _accountBalance -= amount;
-              
-              // Add the new withdrawal transaction to the mini statement
               _miniStatement.insert(0, Transaction(
                 date: DateTime.now(),
                 description: "Mobile Withdrawal",
-                 // Negative amount for withdrawal
                 amount: -amount,
                 type: TransactionType.debit,
                 icon: Icons.phone_android,
@@ -527,7 +531,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   children: [
                     const Icon(Icons.check_circle, color: Colors.white),
                     const SizedBox(width: 8),
-                    Text('Successfully withdrew $_currentCurrencySymbol ${amount.toStringAsFixed(2)}'),
+                    Text('Successfully withdrew $_currentCurrencyCode ${amount.toStringAsFixed(2)}'),
                   ],
                 ),
                 backgroundColor: Colors.orange,
@@ -543,7 +547,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
       },
     );
   }
-  void _viewFullStatement() {}
+
+  void _viewFullStatement() {
+  }
 
   Widget _buildProfileImage() {
     if (widget.profileImageBytes != null) {
@@ -567,7 +573,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         fit: BoxFit.cover,
       );
     } else {
-      return Icon(
+      return const Icon(
         Icons.person,
         color: Colors.white,
         size: 28,
@@ -594,8 +600,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                     colors: [
-                      Color(0xFF0D1B4A),  
-                      Color(0xFF1A237E), 
+                      const Color(0xFF0D1B4A),  
+                      const Color(0xFF1A237E), 
                     ],
                   ),
                   borderRadius: const BorderRadius.only(
@@ -722,8 +728,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           const SizedBox(height: 8),
                           Text(
                             _isBalanceVisible
-                                ? '$_currentCurrencySymbol ${NumberFormat("#,##0.00").format(_accountBalance)}'
-                                : '$_currentCurrencySymbol ••••••',
+                                ? '$_currentCurrencyCode ${NumberFormat("#,##0.00").format(_accountBalance)}'
+                                : '$_currentCurrencyCode ••••••',
                             style: TextStyle(
                               fontSize: 28,
                               fontWeight: FontWeight.bold,
@@ -929,16 +935,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   crossAxisAlignment: CrossAxisAlignment.end,
                                   children: [
-                                  Text(
-                                    '${transaction.amount >= 0 ? '+' : ''}$_currentCurrencySymbol ${NumberFormat("#,##0.00").format(transaction.amount.abs())}',
-                                    style: TextStyle(
-                                      color: transaction.type == TransactionType.credit
-                                          ? Colors.green
-                                          : Colors.red,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 14,
+                                    Text(
+                                      '${transaction.amount >= 0 ? '+' : ''}$_currentCurrencyCode ${NumberFormat("#,##0.00").format(transaction.amount.abs())}',
+                                      style: TextStyle(
+                                        color: transaction.type == TransactionType.credit
+                                            ? Colors.green
+                                            : Colors.red,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 14,
+                                      ),
                                     ),
-                                  ),
                                     const SizedBox(height: 2),
                                     Container(
                                       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -991,10 +997,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         ),
                         child: Column(
                           children: [
-                            Row(
-                              children: [
-                              ],
-                            ),
                             const SizedBox(height: 16),
                             Row(
                               children: [
@@ -1002,7 +1004,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   child: _buildQuickActionItem(
                                     icon: Icons.phone_android,
                                     title: 'Mobile Money',
-                                    color: Color(0xFF1A237E).withOpacity(0.8),
+                                    color: const Color(0xFF1A237E).withOpacity(0.8),
                                     onTap: () {},
                                   ),
                                 ),
@@ -1011,7 +1013,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   child: _buildQuickActionItem(
                                     icon: Icons.history,
                                     title: 'History',
-                                    color: Color(0xFF1A237E).withOpacity(0.8),
+                                    color: const Color(0xFF1A237E).withOpacity(0.8),
                                     onTap: _viewFullStatement,
                                   ),
                                 ),

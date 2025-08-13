@@ -3,20 +3,21 @@ import 'package:flutter/services.dart';
 import '../Services/api_service.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../Services/currency_service.dart';
 
 class WithdrawDialog extends StatefulWidget {
   final Function(double amount, String phoneNumber) onWithdrawSuccess;
   final double currentBalance;
   final String? authToken;
-  final String? lockedPhoneNumber; 
+  final String? lockedPhoneNumber;
+  final String currencyCode;
 
   const WithdrawDialog({
     super.key,
     required this.onWithdrawSuccess,
     required this.currentBalance,
     this.authToken,
-    this.lockedPhoneNumber, 
+    this.lockedPhoneNumber,
+    required this.currencyCode,
   });
 
   @override
@@ -29,50 +30,35 @@ class _WithdrawDialogState extends State<WithdrawDialog> {
   final _phoneController = TextEditingController();
   bool _isProcessing = false;
   String? _cachedToken;
-  String _currentCurrency = '';
-  String _currentCurrencySymbol = '';
+  String _currentCurrencyCode = '';
 
   @override
   void initState() {
     super.initState();
     _loadCachedToken();
-    _loadCurrency();
+    _currentCurrencyCode = widget.currencyCode;
     
     if (widget.lockedPhoneNumber != null && widget.lockedPhoneNumber!.isNotEmpty) {
       String phoneNumber = widget.lockedPhoneNumber!;
       if (_isValidPhoneFormat(phoneNumber)) {
         _phoneController.text = phoneNumber;
-        print("Withdraw Dialog - Locked phone number set: $phoneNumber");
-      } else {
-        print("Withdraw Dialog - Invalid phone format: $phoneNumber");
       }
-    } else {
-      print("Withdraw Dialog - No locked phone number provided");
     }
   }
+
   bool _isValidPhoneFormat(String phone) {
     String cleanedPhone = phone.replaceAll(RegExp(r'[^\d]'), '');
     return (cleanedPhone.startsWith('254') && cleanedPhone.length == 12) ||
           (cleanedPhone.startsWith('0') && cleanedPhone.length == 10) ||
           (cleanedPhone.startsWith('7') && cleanedPhone.length == 9);
   }
+
   @override
   void dispose() {
     _amountController.dispose();
     _phoneController.dispose();
     super.dispose();
   }
-  Future<void> _loadCurrency() async {
-    final currency = await CurrencyService.getCurrency() ?? '';
-    final currencySymbol = await CurrencyService.getCurrencySymbol();
-    
-    if (mounted) {
-      setState(() {
-        _currentCurrency = currency;
-        _currentCurrencySymbol = currencySymbol;
-      });
-    }
-}
 
   Future<void> _loadCachedToken() async {
     try {
@@ -101,10 +87,10 @@ class _WithdrawDialogState extends State<WithdrawDialog> {
       return 'Please enter a valid amount';
     }
     if (amount < 10) {
-      return 'Minimum withdrawal amount is $_currentCurrencySymbol 10';
+      return 'Minimum withdrawal amount is $_currentCurrencyCode 10';
     }
     if (amount > 7000000) {
-      return 'Maximum withdrawal amount is $_currentCurrencySymbol 7000,000';
+      return 'Maximum withdrawal amount is $_currentCurrencyCode 7000,000';
     }
     if (amount > widget.currentBalance) {
       return 'Insufficient balance';
@@ -147,7 +133,6 @@ class _WithdrawDialogState extends State<WithdrawDialog> {
       });
 
       try {
-        // Ensuring we have the latest token
         if (_cachedToken == null || _cachedToken!.isEmpty) {
           await _loadCachedToken();
         }
@@ -225,6 +210,7 @@ class _WithdrawDialogState extends State<WithdrawDialog> {
         return WithdrawStkPushDialog(
           amount: double.parse(_amountController.text),
           phoneNumber: _formatPhoneNumber(_phoneController.text),
+          currencyCode: _currentCurrencyCode,
           onSuccess: () {
             Navigator.of(context).pop();
             Navigator.of(context).pop();
@@ -322,7 +308,7 @@ class _WithdrawDialogState extends State<WithdrawDialog> {
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
-                                'Balance: $_currentCurrencySymbol ${NumberFormat("#,##0.00").format(widget.currentBalance)}', 
+                                'Balance: $_currentCurrencyCode ${NumberFormat("#,##0.00").format(widget.currentBalance)}',
                                 style: TextStyle(
                                   color: Colors.blue.shade700,
                                   fontSize: 14,
@@ -335,7 +321,7 @@ class _WithdrawDialogState extends State<WithdrawDialog> {
                       ),
                       const SizedBox(height: 20),
                       Text(
-                        'Amount ($_currentCurrencySymbol)',
+                        'Amount ($_currentCurrencyCode)',
                         style: const TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w500,
@@ -351,7 +337,7 @@ class _WithdrawDialogState extends State<WithdrawDialog> {
                         ],
                         decoration: InputDecoration(
                           hintText: 'Enter amount',
-                          prefixText: '$_currentCurrencySymbol ',
+                          prefixText: '$_currentCurrencyCode ',
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
                             borderSide: BorderSide(color: Colors.grey.shade300),
@@ -447,9 +433,9 @@ class _WithdrawDialogState extends State<WithdrawDialog> {
                         ),
                         validator: _validatePhone,
                         enabled: (widget.lockedPhoneNumber == null || 
-                              widget.lockedPhoneNumber!.isEmpty || 
-                              !_isValidPhoneFormat(widget.lockedPhoneNumber!)) && !_isProcessing,
-                        ),
+                                  widget.lockedPhoneNumber!.isEmpty || 
+                                  !_isValidPhoneFormat(widget.lockedPhoneNumber!)) && !_isProcessing,
+                      ),
                       const SizedBox(height: 24),
                       SizedBox(
                         width: double.infinity,
@@ -540,6 +526,7 @@ class _WithdrawDialogState extends State<WithdrawDialog> {
 class WithdrawStkPushDialog extends StatefulWidget {
   final double amount;
   final String phoneNumber;
+  final String currencyCode;
   final VoidCallback onSuccess;
   final VoidCallback onCancel;
 
@@ -547,6 +534,7 @@ class WithdrawStkPushDialog extends StatefulWidget {
     super.key,
     required this.amount,
     required this.phoneNumber,
+    required this.currencyCode,
     required this.onSuccess,
     required this.onCancel,
   });
@@ -655,19 +643,13 @@ class _WithdrawStkPushDialogState extends State<WithdrawStkPushDialog>
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 8),
-                FutureBuilder<String>(
-                  future: CurrencyService.getCurrencySymbol(),
-                  builder: (context, snapshot) {
-                    final symbol = snapshot.data ?? '';
-                    return Text(
-                      '$symbol ${widget.amount.toStringAsFixed(2)} has been sent to ${widget.phoneNumber}.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: Colors.grey.shade600,
-                        fontSize: 14,
-                      ),
-                    );
-                  },
+                Text(
+                  '${widget.currencyCode} ${widget.amount.toStringAsFixed(2)} has been sent to ${widget.phoneNumber}.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Colors.grey.shade600,
+                    fontSize: 14,
+                  ),
                 ),
                 const SizedBox(height: 8),
                 Text(
@@ -770,7 +752,7 @@ class _WithdrawStkPushDialogState extends State<WithdrawStkPushDialog>
               child: Column(
                 children: [
                   Text(
-                    'Withdrawal: KES ${widget.amount.toStringAsFixed(2)}',
+                    'Withdrawal: ${widget.currencyCode} ${widget.amount.toStringAsFixed(2)}',
                     style: const TextStyle(fontWeight: FontWeight.w500),
                     textAlign: TextAlign.center,
                   ),
