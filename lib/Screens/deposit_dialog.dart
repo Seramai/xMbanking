@@ -66,10 +66,10 @@ class _DepositDialogState extends State<DepositDialog> {
       return 'Please enter a valid amount';
     }
     if (amount < 10) {
-      return 'Minimum deposit amount is $_currentCurrencyCode 10';
+      return 'Minimum amount is $_currentCurrencyCode 10';
     }
     if (amount > 15000000) {
-      return 'Maximum deposit amount is $_currentCurrencyCode 15,000,000';
+      return 'Maximum  amount is $_currentCurrencyCode 15,000,000';
     }
     return null;
   }
@@ -140,7 +140,7 @@ class _DepositDialogState extends State<DepositDialog> {
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(result['message'] ?? 'Deposit request failed'),
+              content: Text(result['message'] ?? 'Send to sacco request failed'),
               backgroundColor: Colors.red,
             ),
           );
@@ -151,7 +151,7 @@ class _DepositDialogState extends State<DepositDialog> {
       } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Deposit failed: $e'),
+            content: Text('Send to sacco failed: $e'),
             backgroundColor: Colors.red,
           ),
         );
@@ -228,7 +228,7 @@ class _DepositDialogState extends State<DepositDialog> {
                     ),
                     const SizedBox(width: 12),
                     const Text(
-                      'Deposit Money',
+                      'Send To Sacco',
                       style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
@@ -373,7 +373,7 @@ class _DepositDialogState extends State<DepositDialog> {
                 TextFormField(
                   controller: _remarksController,
                   decoration: InputDecoration(
-                    hintText: 'Enter remarks for this deposit',
+                    hintText: 'Enter remarks for this transaction',
                     prefixIcon: const Icon(Icons.note),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -437,7 +437,7 @@ class _DepositDialogState extends State<DepositDialog> {
                             ],
                           )
                         : const Text(
-                            'Process Deposit',
+                            'Send to Sacco',
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
@@ -591,7 +591,7 @@ class _StkPushDialogState extends State<StkPushDialog>
                 ),
                 const SizedBox(height: 16),
                 const Text(
-                  'Deposit Successful!',
+                   'Transaction Successful!',
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
@@ -599,7 +599,7 @@ class _StkPushDialogState extends State<StkPushDialog>
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  '${widget.currencyCode} ${widget.amount.toStringAsFixed(2)} has been deposited to your account.',
+                  '${widget.currencyCode} ${widget.amount.toStringAsFixed(2)}  has been sent to your SACCO account.',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     color: Colors.grey.shade600,

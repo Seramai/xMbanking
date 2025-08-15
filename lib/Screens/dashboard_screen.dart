@@ -52,6 +52,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
     super.initState();
     _initializeData();
   }
+
+  String get _greeting {
+    final hour = DateTime.now().hour;
+    if (hour >= 0 && hour < 12) {
+      return 'Good morning';
+    } else if (hour >= 12 && hour < 17) {
+      return 'Good afternoon';
+    } else {
+      return 'Good evening';
+    }
+  }
+
   void _initializeData() {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await _loadRegistrationDataFromCache();
@@ -431,7 +443,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  void _handleDeposit() {
+  void _handleSendToSacco() {
     String? authToken;
     if (_loginData != null && _loginData!['data'] != null) {
       final actualData = _loginData!['data'] as Map<String, dynamic>;
@@ -464,7 +476,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     children: [
                       const Icon(Icons.check_circle, color: Colors.white),
                       const SizedBox(width: 8),
-                      Text('Successfully deposited $_currentCurrencyCode ${amount.toStringAsFixed(2)}'),
+                      Text('Successfully sent $_currentCurrencyCode ${amount.toStringAsFixed(2)} to SACCO'),
                     ],
                   ),
                   backgroundColor: Colors.green,
@@ -481,7 +493,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       },
     );
   }
-  void _handleWithdraw() {
+  void _handleSendToMTN() {
     String? authToken;
     if (_loginData != null && _loginData!['data'] != null) {
       final actualData = _loginData!['data'] as Map<String, dynamic>;
@@ -515,7 +527,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     children: [
                       const Icon(Icons.check_circle, color: Colors.white),
                       const SizedBox(width: 8),
-                      Text('Successfully withdrew $_currentCurrencyCode ${amount.toStringAsFixed(2)}'),
+                      Text('Successfully sent $_currentCurrencyCode ${amount.toStringAsFixed(2)} to MTN'),
                     ],
                   ),
                   backgroundColor: Colors.orange,
@@ -532,6 +544,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
       },
     );
   }
+
+  void _handlePayBills() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Pay Bills feature coming soon!'),
+        backgroundColor: Colors.blue,
+        duration: Duration(seconds: 2),
+      ),
+    );
+  }
+
   void _viewFullStatement() {
   }
   Widget _buildProfileImage() {
@@ -614,12 +637,32 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             ),
                           ),
                         ),
-                        Text(
-                          'Welcome, ${_apiUsername ?? widget.username}',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
+                        Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            child: Column(
+                              children: [
+                                Text(
+                                  _greeting,
+                                  style: const TextStyle(
+                                    color: Colors.white70,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  _apiUsername ?? widget.username,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                         GestureDetector(
@@ -743,9 +786,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         children: [
                           Expanded(
                             child: ElevatedButton.icon(
-                              onPressed: _isRefreshing ? null : _handleDeposit,
-                              icon: const Icon(Icons.add_circle_outline),
-                              label: const Text('Deposit'),
+                              onPressed: _isRefreshing ? null : _handleSendToSacco,
+                              icon: const Icon(Icons.business_outlined),
+                              label: const Text('Send to SACCO'),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Theme.of(context).primaryColor,
                                 foregroundColor: Colors.white,
@@ -757,28 +800,44 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               ),
                             ),
                           ),
-                          const SizedBox(width: 16),
+                          const SizedBox(width: 12),
                           Expanded(
                             child: ElevatedButton.icon(
-                              onPressed: _isRefreshing ? null : _handleWithdraw,
-                              icon: const Icon(Icons.remove_circle_outline),
-                              label: const Text('Withdraw'),
+                              onPressed: _isRefreshing ? null : _handleSendToMTN,
+                              icon: const Icon(Icons.phone_android_outlined),
+                              label: const Text('Send to MTN'),
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.white,
-                                foregroundColor: Theme.of(context).primaryColor,
+                                backgroundColor: const Color(0xFFFFA726),
+                                foregroundColor: Colors.white,
                                 padding: const EdgeInsets.symmetric(vertical: 16),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12),
-                                  side: BorderSide(
-                                    color: Theme.of(context).primaryColor,
-                                    width: 2,
-                                  ),
                                 ),
                                 elevation: 4,
                               ),
                             ),
                           ),
                         ],
+                      ),
+                      
+                      const SizedBox(width: 12),
+                      Container(
+                        width: double.infinity,
+                        margin: const EdgeInsets.only(top: 12),
+                        child: ElevatedButton.icon(
+                          onPressed: _isRefreshing ? null : _handlePayBills,
+                          icon: const Icon(Icons.receipt_long_outlined),
+                          label: const Text('Pay Bills'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF4CAF50),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            elevation: 4,
+                          ),
+                        ),
                       ),
                       
                       const SizedBox(height: 24),

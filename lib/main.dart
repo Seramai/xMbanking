@@ -7,12 +7,24 @@ import 'Screens/dashboard_screen.dart';
 import 'Screens/user_profile_screen.dart';
 import 'Screens/notifications_screen.dart';
 import 'Screens/change_pin_screen.dart';
+import 'Screens/splash_screen.dart'; 
 import 'Config/api_config.dart';
 
 
 void main() async{
   // initializing flutter
   WidgetsFlutterBinding.ensureInitialized();
+  final binding = WidgetsFlutterBinding.ensureInitialized();
+  binding.addPostFrameCallback((_) async {
+    await precacheImage(
+      const AssetImage('assets/images/logo.jpg'), 
+      binding.rootElement!,
+    );
+  });
+  runApp(const MaterialApp(
+    home: SplashScreen(),
+    debugShowCheckedModeBanner: false,
+  ));
   try{
     await ApiConfig.initialize();
     print(" App initialized successfully");
@@ -38,7 +50,7 @@ class MyApp extends StatelessWidget {
         primaryColor: Color(0xFF1A237E),
       ),
       routes: {
-        '/': (context) => const LoginScreen(),
+        '/': (context) => const SplashScreen(),
         '/register': (context) => const RegistrationScreen(),
         '/login': (context) {
           final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;

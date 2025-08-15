@@ -87,10 +87,10 @@ class _WithdrawDialogState extends State<WithdrawDialog> {
       return 'Please enter a valid amount';
     }
     if (amount < 10) {
-      return 'Minimum withdrawal amount is $_currentCurrencyCode 10';
+      return 'Minimum amount is $_currentCurrencyCode 10';
     }
     if (amount > 7000000) {
-      return 'Maximum withdrawal amount is $_currentCurrencyCode 7000,000';
+      return 'Maximum amount is $_currentCurrencyCode 7000,000';
     }
     if (amount > widget.currentBalance) {
       return 'Insufficient balance';
@@ -157,7 +157,7 @@ class _WithdrawDialogState extends State<WithdrawDialog> {
           token: authToken,
           phoneNumber: _formatPhoneNumber(_phoneController.text),
           amount: double.parse(_amountController.text),
-          remarks: "Withdrawal from wallet",
+          remarks: "Transact from wallet",
         );
 
         if (result['success'] == true) {
@@ -165,7 +165,7 @@ class _WithdrawDialogState extends State<WithdrawDialog> {
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(result['message'] ?? 'Withdrawal request failed'),
+              content: Text(result['message'] ?? 'Send to MTN request failed'),
               backgroundColor: Colors.red,
             ),
           );
@@ -190,7 +190,7 @@ class _WithdrawDialogState extends State<WithdrawDialog> {
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Withdrawal failed: $e'),
+              content: Text('Send to MTN failed: $e'),
               backgroundColor: Colors.red,
             ),
           );
@@ -266,7 +266,7 @@ class _WithdrawDialogState extends State<WithdrawDialog> {
                   const SizedBox(width: 12),
                   const Expanded(
                     child: Text(
-                      'Withdraw Money',
+                      'Send to MTN',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -474,7 +474,7 @@ class _WithdrawDialogState extends State<WithdrawDialog> {
                                   ],
                                 )
                               : const Text(
-                                  'Process Withdrawal',
+                                   'Send to MTN',
                                   style: TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.bold,
@@ -501,7 +501,7 @@ class _WithdrawDialogState extends State<WithdrawDialog> {
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
-                                'You will receive a notification to confirm the withdrawal. Money will be sent to the phone number above.',
+                                'You will receive a notification to confirm the transaction. Money will be sent to the phone number above.',
                                 style: TextStyle(
                                   color: Colors.orange.shade700,
                                   fontSize: 12,
@@ -635,7 +635,7 @@ class _WithdrawStkPushDialogState extends State<WithdrawStkPushDialog>
                 ),
                 const SizedBox(height: 16),
                 const Text(
-                  'Withdrawal Successful!',
+                  'Transaction Successful!',
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -733,7 +733,7 @@ class _WithdrawStkPushDialogState extends State<WithdrawStkPushDialog>
             ),
             const SizedBox(height: 8),
             Text(
-              'Check your phone for a prompt to confirm withdrawal',
+              'Check your phone for a prompt to confirm transaction',
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: Colors.grey.shade600,
@@ -752,7 +752,7 @@ class _WithdrawStkPushDialogState extends State<WithdrawStkPushDialog>
               child: Column(
                 children: [
                   Text(
-                    'Withdrawal: ${widget.currencyCode} ${widget.amount.toStringAsFixed(2)}',
+                    'Amount: ${widget.currencyCode} ${widget.amount.toStringAsFixed(2)}',
                     style: const TextStyle(fontWeight: FontWeight.w500),
                     textAlign: TextAlign.center,
                   ),
