@@ -23,6 +23,8 @@ dependencies:
   connectivity_plus: ^4.0.2
   package_info_plus: ^4.0.2
   shared_preferences: ^2.2.2
+  sms_autofill: ^2.3.0
+  otp_autofill: ^4.1.0
 
 dev_dependencies:
   flutter_test:

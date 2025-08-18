@@ -7,6 +7,8 @@ import 'dart:convert';
 import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
+import 'package:sms_autofill/sms_autofill.dart';
+import 'package:otp_autofill/otp_autofill.dart';
 
 class OTPVerificationScreen extends StatefulWidget {
   final String email;
@@ -32,7 +34,7 @@ class OTPVerificationScreen extends StatefulWidget {
   State<OTPVerificationScreen> createState() => _OTPVerificationScreenState();
 }
 
-class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
+class _OTPVerificationScreenState extends State<OTPVerificationScreen> with CodeAutoFill {
   final List<TextEditingController> _otpControllers =
       List.generate(6, (_) => TextEditingController());
   final List<FocusNode> _focusNodes = List.generate(6, (_) => FocusNode());
@@ -41,11 +43,15 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
   bool _isResending = false;
   int _resendTimer = 60;
   Timer? _timer;
+  String _autoFillCode = '';
+  late OTPTextEditController _otpConsentController;
 
   @override
   void initState() {
     super.initState();
     _startResendTimer();
+    _initSmsAutofill();
+    _initUserConsent();
   }
 
   @override
@@ -53,11 +59,30 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
     for (final controller in _otpControllers) {
       controller.dispose();
     }
-    for (final focusNode in _focusNodes) {
-      focusNode.dispose();
+    for (final node in _focusNodes) {
+      node.dispose();
     }
     _timer?.cancel();
+    try {
+      SmsAutoFill().unregisterListener();
+    } catch (_) {}
+    try {
+      cancel();
+    } catch (_) {}
+    try {
+      _otpConsentController.stopListen();
+    } catch (_) {}
     super.dispose();
+  }
+
+  Future<void> _initSmsAutofill() async {
+    try {
+      listenForCode();
+      final signature = await SmsAutoFill().getAppSignature;
+      debugPrint('App signature for OTP SMS: $signature');
+    } catch (e) {
+      debugPrint('Failed to initialize SMS autofill: $e');
+    }
   }
 
   void _startResendTimer() {
@@ -75,10 +100,43 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
     });
   }
 
-  String _getOTPCode() =>
-      _otpControllers.map((controller) => controller.text).join();
+  void _initUserConsent() {
+    try {
+      _otpConsentController = OTPTextEditController(
+        codeLength: 6,
+        onCodeReceive: (receivedMessage) {
+          final match = RegExp(r'\d{4,6}').firstMatch(receivedMessage ?? '');
+          final digits = match?.group(0) ?? '';
+          if (digits.isEmpty) return;
+          if (!mounted) return;
+          setState(() {
+            _autoFillCode = digits;
+          });
+          for (int i = 0; i < 6 && i < digits.length; i++) {
+            _otpControllers[i].text = digits[i];
+          }
+          if (digits.length == 6) {
+            _verifyOTP();
+          }
+        },
+      )
+        ..startListenUserConsent(
+          (message) {
+            final match = RegExp(r'\d{4,6}').firstMatch(message ?? '');
+            return match?.group(0) ?? '';
+          },
+        );
+    } catch (e) {
+      debugPrint('Failed to initialize SMS User Consent: $e');
+    }
+  }
 
-  bool _isOTPComplete() => _getOTPCode().length == 6;
+  String _getOTPCode() {
+    if (_autoFillCode.isNotEmpty) return _autoFillCode;
+    return _otpControllers.map((c) => c.text).join();
+  }
+
+  bool _isOTPComplete() => _getOTPCode().replaceAll(RegExp(r'\D'), '').length == 6;
 
   void _onOTPChanged(String value, int index) {
     if (value.isNotEmpty && index < 5) {
@@ -109,11 +167,6 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
         userId: widget.userId,
         otpCode: otpCode,
       );
-
-      print("=== OTP VERIFICATION RESPONSE ===");
-      print("Full result: $result");
-      print("Result data: ${result['data']}");
-      print("==================================");
 
       if (result['success'] == true) {
         final authToken = result['data']?['Token'] ??
@@ -150,11 +203,6 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
             'message': result['message'] ?? 'Login successful',
             'needsRefresh': false,
           };
-          
-          print("=== STRUCTURED LOGIN DATA FOR DASHBOARD ===");
-          print("Complete login data: $completeLoginData");
-          print("Data portion: ${completeLoginData['data']}");
-          print("==========================================");
         }
 
         // Storing data locally
@@ -228,10 +276,29 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
   }
 
   void _clearOTP() {
+    setState(() {
+      _autoFillCode = '';
+    });
     for (final controller in _otpControllers) {
       controller.clear();
     }
-    _focusNodes[0].requestFocus();
+    _focusNodes.first.requestFocus();
+  }
+
+  @override
+  void codeUpdated() {
+    final received = code ?? '';
+    if (received.isEmpty) return;
+    final digits = received.replaceAll(RegExp(r'\D'), '');
+    setState(() {
+      _autoFillCode = digits;
+    });
+    for (int i = 0; i < 6 && i < digits.length; i++) {
+      _otpControllers[i].text = digits[i];
+    }
+    if (digits.length == 6) {
+      _verifyOTP();
+    }
   }
 
   Future<void> _resendOTP() async {
@@ -317,7 +384,9 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
                         keyboardType: TextInputType.number,
                         maxLength: 1,
                         style: const TextStyle(
-                            fontSize: 20, fontWeight: FontWeight.bold),
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
                         inputFormatters: [
                           FilteringTextInputFormatter.digitsOnly,
                         ],
