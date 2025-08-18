@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../Services/api_service.dart';
 import 'package:intl/intl.dart';
+import '../Widgets/custom_dialogs.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class WithdrawDialog extends StatefulWidget {
@@ -140,11 +141,14 @@ class _WithdrawDialogState extends State<WithdrawDialog> {
         String? authToken = _cachedToken;
 
         if (authToken == null || authToken.isEmpty) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Session expired. Please login again.'),
-              backgroundColor: Colors.red,
-            ),
+          CustomDialogs.showErrorDialog(
+            context: context,
+            title: 'Session Expired',
+            message: 'Your session has expired. Please login again to continue.',
+            onPressed: () {
+              Navigator.of(context).pop();
+              Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+            },
           );
           setState(() {
             _isProcessing = false;
@@ -163,11 +167,10 @@ class _WithdrawDialogState extends State<WithdrawDialog> {
         if (result['success'] == true) {
           _showStkPushDialog(); 
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(result['message'] ?? 'Send to MTN request failed'),
-              backgroundColor: Colors.red,
-            ),
+          CustomDialogs.showErrorDialog(
+            context: context,
+            title: 'Transaction Failed',
+            message: result['message'] ?? 'Unable to process your withdrawal request. Please try again.',
           );
           setState(() {
             _isProcessing = false;

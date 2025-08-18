@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../Services/api_service.dart';
+import '../Widgets/custom_dialogs.dart';
 import 'dart:convert';
 import 'dart:async';
 import 'dart:io';
@@ -92,7 +93,11 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
 
   Future<void> _verifyOTP() async {
     if (!_isOTPComplete()) {
-      _showSnackBar('Please enter complete OTP', Colors.orange);
+      CustomDialogs.showWarningDialog(
+        context: context, 
+        title: 'Incomplete OTP', 
+        message: 'Please enter the complete 6-digit verification code.',
+        );
       return;
     }
 
@@ -161,48 +166,60 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
         await prefs.setString('userMobile', widget.mobileNumber);
         await prefs.setBool('isLoggedIn', true);
 
-        _showSnackBar('OTP verified successfully!', Colors.green);
-        if (isFirstTimeUser) {
-          _navigateTo(
-            '/change-pin',
-            {
-              'authToken': authToken ?? '',
-              'isFirstTime': true,
-              'username':
-                  result['data']?['Name'] ?? args?['fullName'] ?? 'User',
-              'email': widget.email,
-              'profileImageBytes': widget.profileImageBytes,
-              'profileImageFile': widget.profileImageFile,
-              'loginData': completeLoginData,
-              'useStoredData': true,
-            },
-          );
-        } else {
-          // For existing users, pass the complete data to dashboard
-          _navigateTo(
-            '/dashboard',
-            {
-              'loginData': completeLoginData, // This contains all the fresh data from OTP verification
-              'authToken': authToken,
-              'username': result['data']?['Name'] ?? args?['fullName'] ?? 'User',
-              'mobileNumber': widget.mobileNumber,
-              'email': widget.email,
-              'profileImageBytes': widget.profileImageBytes,
-              'profileImageFile': widget.profileImageFile,
-              'useStoredData': false,
-            },
-          );
-        }
+        CustomDialogs.showSuccessDialog(
+          context: context, 
+          title: 'Verification Successful', 
+          message: 'Your Account has been verified successfully',
+          onPressed: (){
+            Navigator.of(context).pop();
+            if (isFirstTimeUser) {
+              _navigateTo(
+                '/change-pin',
+                {
+                  'authToken': authToken ?? '',
+                  'isFirstTime': true,
+                  'username':
+                      result['data']?['Name'] ?? args?['fullName'] ?? 'User',
+                  'email': widget.email,
+                  'profileImageBytes': widget.profileImageBytes,
+                  'profileImageFile': widget.profileImageFile,
+                  'loginData': completeLoginData,
+                  'useStoredData': true,
+                },
+              );
+            } else {
+              // For existing users, pass the complete data to dashboard
+              _navigateTo(
+                '/dashboard',
+                {
+                  'loginData': completeLoginData, // This contains all the fresh data from OTP verification
+                  'authToken': authToken,
+                  'username': result['data']?['Name'] ?? args?['fullName'] ?? 'User',
+                  'mobileNumber': widget.mobileNumber,
+                  'email': widget.email,
+                  'profileImageBytes': widget.profileImageBytes,
+                  'profileImageFile': widget.profileImageFile,
+                  'useStoredData': false,
+                },
+              );
+            }
+            }
+            );
       } else {
-        _showSnackBar(
-          result['message'] ?? 'Invalid OTP. Please try again.',
-          Colors.red,
+        CustomDialogs.showErrorDialog(
+          context: context,
+          title: 'Verification Failed',
+          message: result['message'] ?? 'The verification code you entered is incorrect. Please check and try again.',
         );
         _clearOTP();
       }
     } catch (e) {
       print("OTP verification error: $e");
-      _showSnackBar('Verification failed: $e', Colors.red);
+      CustomDialogs.showErrorDialog(
+        context: context, 
+        title: 'Verification Error', 
+        message: 'Unable to verify your code. Please check your internet connection and try again. ',
+        );
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -225,10 +242,18 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
     try {
       await Future.delayed(const Duration(seconds: 1));
 
-      _showSnackBar('OTP resent to ${widget.email}', Colors.green);
+      CustomDialogs.showInfoDialog(
+        context: context,
+        title: 'Code Resent',
+        message: 'A new verification code has been sent to ${widget.mobileNumber}',
+      );
       _startResendTimer();
     } catch (e) {
-      _showSnackBar('Failed to resend OTP: $e', Colors.red);
+      CustomDialogs.showErrorDialog(
+        context: context,
+        title: 'Resend Failed',
+        message: 'Unable to resend verification code. Please try again.',
+      );
     } finally {
       if (mounted) {
         setState(() => _isResending = false);
@@ -244,16 +269,6 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
       arguments: arguments,
     );
   }
-
-  void _showSnackBar(String message, Color bgColor) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: bgColor,
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final height = MediaQuery.of(context).size.height;

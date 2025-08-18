@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../Services/api_service.dart';
+import '../Widgets/custom_dialogs.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ChangePinScreen extends StatefulWidget {
@@ -100,11 +101,10 @@ class _ChangePinScreenState extends State<ChangePinScreen> {
     authToken = prefs.getString('authToken') ?? '';
     
     if (authToken.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Authentication error. Please login again.'),
-          backgroundColor: Colors.red,
-        ),
+      CustomDialogs.showErrorDialog(
+        context: context,
+        title: 'Authentication Error',
+        message: 'Authentication error. Please login again.',
       );
       return;
     }
@@ -123,24 +123,13 @@ class _ChangePinScreenState extends State<ChangePinScreen> {
       );
 
       if (result['success'] == true) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                const Icon(Icons.check_circle, color: Colors.white),
-                const SizedBox(width: 8),
-                Text(result['message'] ?? 'PIN changed successfully!'),
-              ],
-            ),
-            backgroundColor: Colors.green,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
-            duration: const Duration(seconds: 3),
-          ),
-        );
-
+        CustomDialogs.showSuccessDialog(
+          context: context,
+           title: 'PIN Changed Successfully', 
+           message: result['message'] ?? 'PIN changed successfully!',
+           buttonText: widget.isFirstTime ? 'OK' : 'OK',
+           onPressed: () {
+              Navigator.of(context).pop(); 
         // Handle navigation based on whether it's first time or not
         if (widget.isFirstTime) {
           Navigator.pushNamedAndRemoveUntil(
@@ -168,79 +157,48 @@ class _ChangePinScreenState extends State<ChangePinScreen> {
           );
         } else {
           Navigator.pop(context);
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Row(
-                children: [
-                  const Icon(Icons.check_circle, color: Colors.white),
-                  const SizedBox(width: 8),
-                  Text('Your PIN has been updated successfully'),
-                ],
-              ),
-              backgroundColor: Colors.green,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-              duration: const Duration(seconds: 3),
-            ),
+          CustomDialogs.showSuccessDialog(
+            context: context,
+            title: 'PIN Updated',
+            message: 'Your PIN has been updated successfully',
+            buttonText: 'OK',
+            onPressed: () {
+              Navigator.of(context).pop(); 
+              Navigator.pop(context); 
+            },
           );
         }
+      }
+        );
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                const Icon(Icons.error, color: Colors.white),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(result['message'] ?? 'PIN change failed. Please try again.'),
-                ),
-              ],
-            ),
-            backgroundColor: Colors.red,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
-            duration: const Duration(seconds: 4),
-          ),
+        CustomDialogs.showErrorDialog(
+          context: context,
+          title: 'PIN Change Failed',
+          message: result['message'] ?? 'PIN change failed. Please try again.',
         );
       }
     } catch (e) {
-      if (e.toString().contains('401') || e.toString().contains('Unauthorized')) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Session expired. Please login again.'),
-            backgroundColor: Colors.red,
-          ),
-        );
-        Navigator.pushNamedAndRemoveUntil(
-          context,
-          '/login',
-          (route) => false,
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                const Icon(Icons.error, color: Colors.white),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text('PIN change error: $e'),
-                ),
-              ],
-            ),
-            backgroundColor: Colors.red,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
-            duration: const Duration(seconds: 4),
-          ),
-        );
-      }
+    if (e.toString().contains('401') || e.toString().contains('Unauthorized')) {
+      CustomDialogs.showErrorDialog(
+        context: context,
+        title: 'Session Expired',
+        message: 'Session expired. Please login again.',
+        onPressed: () {
+          Navigator.of(context).pop();
+          Navigator.pushNamedAndRemoveUntil(
+            context,
+            '/login',
+            (route) => false,
+          );
+        },
+      );
+    } else {
+      CustomDialogs.showErrorDialog(
+        context: context,
+        title: 'PIN Change Error',
+        message: 'PIN change error: $e',
+      );
+    }
     } finally {
       setState(() {
         _isLoading = false;
@@ -250,12 +208,6 @@ class _ChangePinScreenState extends State<ChangePinScreen> {
 
   @override
   Widget build(BuildContext context) {
-      print("=== CHANGE PIN RECEIVED ===");
-      print("authToken: ${widget.authToken}");
-      print("username: ${widget.username}");
-      print("loginData: ${widget.loginData}");
-      print("isFirstTime: ${widget.isFirstTime}");
-      print("============================");
     return WillPopScope(
       // Prevent back navigation for first-time users (mandatory PIN change)
       onWillPop: () async => !widget.isFirstTime,

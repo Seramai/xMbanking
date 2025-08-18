@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../Widgets/custom_dialogs.dart';
 
 class ForgotPinScreen extends StatefulWidget {
   const ForgotPinScreen({super.key});
@@ -96,11 +97,10 @@ class _ForgotPinScreenState extends State<ForgotPinScreen> {
         ),
       );
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Verification failed: $e'),
-          backgroundColor: Colors.red,
-        ),
+      CustomDialogs.showErrorDialog(
+        context: context,
+        title: 'Verification Failed',
+        message: 'Verification failed: $e',
       );
     } finally {
       setState(() {
@@ -130,11 +130,10 @@ class _ForgotPinScreenState extends State<ForgotPinScreen> {
       );
       Navigator.pushReplacementNamed(context, '/login');
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('PIN update failed: $e'),
-          backgroundColor: Colors.red,
-        ),
+      CustomDialogs.showErrorDialog(
+        context: context,
+        title: 'PIN Update Failed',
+        message: 'PIN update failed: $e',
       );
     } finally {
       setState(() {

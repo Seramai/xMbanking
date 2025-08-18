@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../Services/api_service.dart';
+import '../Widgets/custom_dialogs.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class DepositDialog extends StatefulWidget {
@@ -116,13 +117,15 @@ class _DepositDialogState extends State<DepositDialog> {
           authToken = prefs.getString('authToken') ?? '';
           
           if (authToken.isEmpty) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Authentication error. Please login again.'),
-                backgroundColor: Colors.red,
-              ),
-            );
-            setState(() {
+            CustomDialogs.showErrorDialog(
+              context: context,
+              title: 'Session Expired',
+              message: 'Your session has expired. Please login again to continue.',
+              onPressed: () {
+                Navigator.of(context).pop();
+                Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+              },
+            );            setState(() {
               _isProcessing = false;
             });
             return;
@@ -137,24 +140,22 @@ class _DepositDialogState extends State<DepositDialog> {
 
         if (result['success'] == true) {
           _showStkPushDialog(); 
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(result['message'] ?? 'Send to sacco request failed'),
-              backgroundColor: Colors.red,
-            ),
-          );
+          } else {
+            CustomDialogs.showErrorDialog(
+              context: context,
+              title: 'Transaction Failed',
+              message: result['message'] ?? 'Unable to process your request. Please try again.',
+            );
           setState(() {
             _isProcessing = false;
           });
         }
-      } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Send to sacco failed: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
+          } catch (e) {
+            CustomDialogs.showErrorDialog(
+              context: context,
+              title: 'Transaction Error',
+              message: 'Unable to process your transaction. Please check your connection and try again.',
+            );
         setState(() {
           _isProcessing = false;
         });

@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'user_profile_screen.dart';
 import 'notifications_screen.dart';
 import '../services/api_service.dart';
+import '../Widgets/custom_dialogs.dart';
 import 'dart:io';
 import 'dart:typed_data';
 import 'deposit_dialog.dart';
@@ -298,12 +299,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
   void _handleSessionExpired() {
     if (mounted && context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Your session has expired. Please login again.'),
-          backgroundColor: Colors.red,
-          duration: Duration(seconds: 3),
-        ),
+      CustomDialogs.showErrorDialog(
+        context: context,
+        title: 'Session Expired',
+        message: 'Your session has expired. You will be redirected to the login screen.',
+        onPressed: () {
+          Navigator.of(context).pop(); 
+        },
       );
     }
     
@@ -451,11 +453,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
     
     if (authToken == null || authToken.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Authentication error. Please login again.'),
-          backgroundColor: Colors.red,
-        ),
+      CustomDialogs.showErrorDialog(
+        context: context,
+        title: 'Authentication Error',
+        message: 'Please login again to perform this transaction.',
       );
       return;
     }
@@ -501,11 +502,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
     
     if (authToken == null || authToken.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Authentication error. Please login again.'),
-          backgroundColor: Colors.red,
-        ),
+      CustomDialogs.showErrorDialog(
+        context: context,
+        title: 'Authentication Error',
+        message: 'Please login again to perform this transaction.',
       );
       return;
     }

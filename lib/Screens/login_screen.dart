@@ -5,6 +5,7 @@ import '../Services/api_service.dart';
 import 'menu_drawer_screen.dart';
 import 'dart:io';
 import 'dart:typed_data';
+import '../Widgets/custom_dialogs.dart';
 
 class LoginScreen extends StatefulWidget {
   final Uint8List? profileImageBytes;
@@ -82,19 +83,17 @@ class _LoginScreenState extends State<LoginScreen> {
       if (result['success'] == true) {
         _navigateToOtpScreen(result['data']);
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(result['message'] ?? 'Login failed'),
-            backgroundColor: Colors.red,
-          ),
+        CustomDialogs.showErrorDialog(
+          context: context,
+          title: 'Login Failed',
+          message: result['message'] ?? 'Unable to Login.Please check your credentials and try again'
         );
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Login error: $e'),
-          backgroundColor: Colors.red,
-        ),
+      CustomDialogs.showErrorDialog(
+        context: context,
+        title: 'Network Error',
+        message: 'Unable to connect to server. Please check your internet connection and try again.',
       );
     } finally {
       setState(() {
@@ -108,12 +107,11 @@ class _LoginScreenState extends State<LoginScreen> {
     
     String? userId = loginData?['UserId'] ?? loginData?['userId'];
     if (userId == null && loginData != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Login error: User ID not found. Please try again.'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      CustomDialogs.showErrorDialog(
+        context: context, 
+        title: 'Authentication Error', 
+        message: 'User verification failed. Please try logging in again'
+        );
       return;
     }
     

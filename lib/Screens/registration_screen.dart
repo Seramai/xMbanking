@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../Widgets/custom_dialogs.dart';
 import 'dart:convert';
 import '../Services/api_service.dart';
 import 'dart:io';
@@ -150,19 +151,17 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
           });
         }
         
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(kIsWeb ? 'Profile photo selected successfully' : 'Profile photo captured successfully'),
-            backgroundColor: Colors.green,
-          ),
+        CustomDialogs.showSuccessDialog(
+          context: context,
+          title: 'Successful Capture',
+          message: kIsWeb ? 'Profile photo selected successfully' : 'Profile photo captured successfully',
         );
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(kIsWeb ? 'Failed to select photo: $e' : 'Failed to capture photo: $e'),
-          backgroundColor: Colors.red,
-        ),
+      CustomDialogs.showErrorDialog(
+        context: context,
+        title: 'Photo Error',
+        message: kIsWeb ? 'Failed to select photo: $e' : 'Failed to capture photo: $e',
       );
     }
   }
@@ -174,11 +173,10 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         maxWidth: 800,
         maxHeight: 800,
       ).onError((error, stackTrace) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Camera error: $error'),
-            backgroundColor: Colors.red,
-          ),
+        CustomDialogs.showErrorDialog(
+          context: context,
+          title: 'Camera Error',
+          message: 'Camera error: $error',
         );
         return null;
       });
@@ -198,11 +196,10 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         );
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Camera error: $e'),
-          backgroundColor: Colors.red,
-        ),
+      CustomDialogs.showErrorDialog(
+        context: context,
+        title: 'Camera Error',
+        message: 'Camera error: $e',
       );
     }
   }
@@ -233,11 +230,10 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         );
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error selecting image: $e'),
-          backgroundColor: Colors.red,
-        ),
+      CustomDialogs.showErrorDialog(
+        context: context,
+        title: 'Image Selection Error',
+        message: 'Error selecting image: $e',
       );
     }
   }
@@ -257,19 +253,17 @@ Future<void> _pickSignature() async {
         _signatureDocument = null; 
         _signatureDocumentName = 'signature.jpg';
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Signature image selected successfully'),
-          backgroundColor: Colors.green,
-        ),
-      );
+      CustomDialogs.showSuccessDialog(
+        context: context, 
+        title: 'Successful Selection', 
+        message: 'Signature selected successfully',
+        );
     }
   } catch (e) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Failed to select signature: $e'),
-        backgroundColor: Colors.red,
-      ),
+    CustomDialogs.showErrorDialog(
+      context: context,
+      title: 'Signature Selection Error',
+      message: 'Failed to select signature: $e',
     );
   }
 }
@@ -313,23 +307,21 @@ Future<void> _pickSignature() async {
               _currentStep = 2;
             });
           } else {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(result['message']),
-                backgroundColor: Colors.red,
-              ),
+            CustomDialogs.showErrorDialog(
+              context: context,
+              title: 'Validation Error',
+              message: result['message'],
             );
           }
         } catch (e) {
           setState(() {
             _isLoading = false;
           });
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Validation failed: $e'),
-              backgroundColor: Colors.red,
-            ),
-          );
+            CustomDialogs.showErrorDialog(
+              context: context,
+              title: 'Validation Failed',
+              message: 'Validation failed: $e',
+            );
         }
       }
     }
@@ -349,30 +341,27 @@ Future<void> _pickSignature() async {
     }
 
     if (!_hasSelfie()) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please capture your photo'),
-          backgroundColor: Colors.orange,
-        ),
+      CustomDialogs.showWarningDialog(
+        context: context,
+        title: 'Photo Required',
+        message: 'Please capture your photo',
       );
       return;
     }
     if (!_hasSignature()) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please upload your signature'),
-          backgroundColor: Colors.orange,
-        ),
+      CustomDialogs.showWarningDialog(
+        context: context,
+        title: 'Signature Required',
+        message: 'Please upload your signature',
       );
       return;
     }
 
     if (!_acceptedTerms) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please accept the terms and conditions'),
-          backgroundColor: Colors.orange,
-        ),
+      CustomDialogs.showWarningDialog(
+        context: context,
+        title: 'Terms Required',
+        message: 'Please accept the terms and conditions',
       );
       return;
     }
@@ -405,12 +394,13 @@ Future<void> _pickSignature() async {
           _fullNameController.text,
         );
         
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Registration successful! Please login to your account.'),
-            backgroundColor: Colors.green,
-          ),
-        );
+       CustomDialogs.showSuccessDialog(
+          context: context,
+          title: 'Registration Successful',
+          message: 'Registration successful! Please login to your account.',
+          buttonText: 'Login',
+          onPressed: () {
+            Navigator.of(context).pop();
         Navigator.pushNamedAndRemoveUntil(
           context, 
           '/login',
@@ -424,20 +414,20 @@ Future<void> _pickSignature() async {
             'fromRegistration': true,
           },
         );
+        }
+       );
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(result['message'] ?? 'Registration failed'),
-            backgroundColor: Colors.red,
-          ),
+        CustomDialogs.showErrorDialog(
+          context: context,
+          title: 'Registration Failed',
+          message: result['message'] ?? 'Registration failed',
         );
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Registration failed: $e'),
-          backgroundColor: Colors.red,
-        ),
+      CustomDialogs.showErrorDialog(
+        context: context,
+        title: 'Registration Error',
+        message: 'Registration failed: $e',
       );
     } finally {
       setState(() {
