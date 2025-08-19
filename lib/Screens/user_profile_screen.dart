@@ -295,7 +295,26 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                             SizedBox(
                               width: double.infinity,
                               child: OutlinedButton.icon(
-                                onPressed: () {
+                                onPressed: () async {
+                                  final result = await Navigator.pushNamed(
+                                    context,
+                                    '/edit-profile',
+                                    arguments: {
+                                      'username': _cachedUsername ?? widget.username,
+                                      'email': _cachedEmail ?? widget.email,
+                                      'mobileNumber': widget.mobileNumber,
+                                    },
+                                  );
+                                  if (result is Map<String, dynamic>) {
+                                    setState(() {
+                                      _cachedUsername = result['username'] ?? _cachedUsername;
+                                      _cachedEmail = result['email'] ?? _cachedEmail;
+                                      if (result['imageBytes'] != null) {
+                                        _cachedImageBytes = result['imageBytes'];
+                                        _cachedImageFile = null;
+                                      }
+                                    });
+                                  }
                                 },
                                 icon: const Icon(Icons.edit),
                                 label: const Text('Edit Profile'),

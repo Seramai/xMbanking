@@ -7,6 +7,7 @@ import 'Screens/dashboard_screen.dart';
 import 'Screens/user_profile_screen.dart';
 import 'Screens/notifications_screen.dart';
 import 'Screens/change_pin_screen.dart';
+import 'Screens/edit_profile_screen.dart';
 import 'Screens/splash_screen.dart'; 
 import 'Config/api_config.dart';
 import 'Widgets/inactivity_logout.dart';
@@ -96,6 +97,14 @@ class MyApp extends StatelessWidget {
             email: args?['email'] ?? 'user@example.com',
             profileImageFile: args?['profileImageFile'],
             profileImageBytes: args?['profileImageBytes'],
+          );
+        },
+        '/edit-profile': (context) {
+          final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>?;
+          return EditProfileScreen(
+            initialUsername: args?['username'] ?? 'User',
+            initialEmail: args?['email'] ?? 'user@example.com',
+            mobileNumber: args?['mobileNumber'],
           );
         },
         '/change-pin': (context) {

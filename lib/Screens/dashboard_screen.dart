@@ -58,11 +58,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
   String get _greeting {
     final hour = DateTime.now().hour;
     if (hour >= 0 && hour < 12) {
-      return 'Good morning';
+      return 'Good Morning';
     } else if (hour >= 12 && hour < 17) {
-      return 'Good afternoon';
+      return 'Good Afternoon';
     } else {
-      return 'Good evening';
+      return 'Good Evening';
     }
   }
 
@@ -684,7 +684,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   _greeting,
                                   style: const TextStyle(
                                     color: Colors.white70,
-                                    fontSize: 14,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
                                   ),
                                 ),
                                 const SizedBox(height: 4),
