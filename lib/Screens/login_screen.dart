@@ -5,6 +5,7 @@ import '../Services/api_service.dart';
 import 'dart:io';
 import 'dart:typed_data';
 import '../Widgets/custom_dialogs.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class LoginScreen extends StatefulWidget {
   final Uint8List? profileImageBytes;
@@ -32,6 +33,7 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   void initState() {
     super.initState();
+    _loadSavedLogin();
   }
 
   @override
@@ -80,6 +82,18 @@ class _LoginScreenState extends State<LoginScreen> {
       );
 
       if (result['success'] == true) {
+        try {
+          final prefs = await SharedPreferences.getInstance();
+          if (_rememberMe) {
+            await prefs.setBool('rememberPin', true);
+            await prefs.setString('savedMobile', _mobileNumberController.text.trim());
+            await prefs.setString('savedPin', _passwordController.text.trim());
+          } else {
+            await prefs.remove('rememberPin');
+            await prefs.remove('savedMobile');
+            await prefs.remove('savedPin');
+          }
+        } catch (_) {}
         _navigateToOtpScreen(result['data']);
       } else {
         CustomDialogs.showErrorDialog(
@@ -99,6 +113,25 @@ class _LoginScreenState extends State<LoginScreen> {
         _isLoading = false;
       });
     }
+  }
+  Future<void> _loadSavedLogin() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final remembered = prefs.getBool('rememberPin') ?? false;
+      if (remembered) {
+        final savedMobile = prefs.getString('savedMobile') ?? '';
+        final savedPin = prefs.getString('savedPin') ?? '';
+        setState(() {
+          _rememberMe = true;
+          if (savedMobile.isNotEmpty) {
+            _mobileNumberController.text = savedMobile;
+          }
+          if (savedPin.isNotEmpty) {
+            _passwordController.text = savedPin;
+          }
+        });
+      }
+    } catch (_) {}
   }
 
   void _navigateToOtpScreen(Map<String, dynamic>? loginData) async {
