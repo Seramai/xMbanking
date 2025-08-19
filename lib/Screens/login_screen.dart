@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:local_auth/local_auth.dart';
 import '../Services/api_service.dart';
-import 'menu_drawer_screen.dart';
 import 'dart:io';
 import 'dart:typed_data';
 import '../Widgets/custom_dialogs.dart';
@@ -137,7 +136,6 @@ class _LoginScreenState extends State<LoginScreen> {
 @override
 Widget build(BuildContext context) {
   return Scaffold(
-    drawer: const MenuDrawerScreen(),
     body: Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(
@@ -158,19 +156,7 @@ Widget build(BuildContext context) {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Builder(
-                    builder: (context) => IconButton(
-                      icon: const Icon(
-                        Icons.menu,
-                        color: Colors.white,
-                        size: 28,
-                      ),
-                      onPressed: () {
-                        Scaffold.of(context).openDrawer();
-                      },
-                      tooltip: 'Open menu',
-                    ),
-                  ),
+                  const SizedBox(width: 48),
                   GestureDetector(
                     onTap: () {
                       Navigator.pushNamed(context, '/register');
