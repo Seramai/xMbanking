@@ -510,6 +510,7 @@ class ApiService {
         return {
           'success': false,
           'message': 'Unauthorized - please login again',
+          'tokenValid': false,
         };
       } else if (response.statusCode == 403) {
         return {

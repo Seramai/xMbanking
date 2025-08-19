@@ -94,7 +94,7 @@ class _ChangePinScreenState extends State<ChangePinScreen> {
       return;
     }
 
-  String? authToken = widget.authToken;
+  String authToken = widget.authToken;
   if (authToken.isEmpty) {
     // getting token from cache
     final prefs = await SharedPreferences.getInstance();
@@ -115,60 +115,61 @@ class _ChangePinScreenState extends State<ChangePinScreen> {
     });
 
     try {
-      final result = await ApiService.changePin(
+      Map<String, dynamic> result = await ApiService.changePin(
         token: authToken,
         currentPin: _currentPinController.text.trim(),
         newPin: _newPinController.text.trim(),
         confirmNewPin: _confirmPinController.text.trim(),
       );
+      if (result['tokenValid'] == false) {
+        final prefs = await SharedPreferences.getInstance();
+        final stored = prefs.getString('authToken') ?? '';
+        if (stored.isNotEmpty && stored != authToken) {
+          result = await ApiService.changePin(
+            token: stored,
+            currentPin: _currentPinController.text.trim(),
+            newPin: _newPinController.text.trim(),
+            confirmNewPin: _confirmPinController.text.trim(),
+          );
+        }
+      }
 
       if (result['success'] == true) {
         CustomDialogs.showSuccessDialog(
           context: context,
-           title: 'PIN Changed Successfully', 
-           message: result['message'] ?? 'PIN changed successfully!',
-           buttonText: widget.isFirstTime ? 'OK' : 'OK',
-           onPressed: () {
-              Navigator.of(context).pop(); 
-        // Handle navigation based on whether it's first time or not
-        if (widget.isFirstTime) {
-          Navigator.pushNamedAndRemoveUntil(
-            context,
-            '/dashboard',
-            (route) => false,
-            arguments: {
-              'loginData': widget.loginData ?? {
-                'data': {
-                  'Name': widget.username,
-                  'Email': widget.email,
-                  'Token': widget.authToken,
-                  'isFirstTimeUser': false, // Marked as no longer first-time user
+          title: 'PIN Changed Successfully',
+          message: result['message'] ?? 'PIN changed successfully!',
+          buttonText: 'OK',
+          onPressed: () {
+            Navigator.of(context).pop();
+            if (widget.isFirstTime) {
+              Navigator.pushNamedAndRemoveUntil(
+                context,
+                '/dashboard',
+                (route) => false,
+                arguments: {
+                  'loginData': widget.loginData ?? {
+                    'data': {
+                      'Name': widget.username,
+                      'Email': widget.email,
+                      'Token': widget.authToken,
+                      'isFirstTimeUser': false,
+                    },
+                    'success': true,
+                    'message': 'PIN setup successful',
+                  },
+                  'authToken': widget.authToken,
+                  'username': widget.username ?? 'User',
+                  'email': widget.email ?? '',
+                  'profileImageBytes': widget.loginData?['profileImageBytes'],
+                  'profileImageFile': widget.loginData?['profileImageFile'],
+                  'useStoredData': false,
                 },
-                'success': true,
-                'message': 'PIN setup successful',
-              },
-              'authToken': widget.authToken,
-              'username': widget.username ?? 'User',
-              'email': widget.email ?? '',
-              'profileImageBytes': widget.loginData?['profileImageBytes'],
-              'profileImageFile': widget.loginData?['profileImageFile'],
-              'useStoredData': false,
-            },
-          );
-        } else {
-          Navigator.pop(context);
-          CustomDialogs.showSuccessDialog(
-            context: context,
-            title: 'PIN Updated',
-            message: 'Your PIN has been updated successfully',
-            buttonText: 'OK',
-            onPressed: () {
-              Navigator.of(context).pop(); 
-              Navigator.pop(context); 
-            },
-          );
-        }
-      }
+              );
+            } else {
+              Navigator.pop(context);
+            }
+          },
         );
       } else {
         CustomDialogs.showErrorDialog(
@@ -178,27 +179,11 @@ class _ChangePinScreenState extends State<ChangePinScreen> {
         );
       }
     } catch (e) {
-    if (e.toString().contains('401') || e.toString().contains('Unauthorized')) {
-      CustomDialogs.showErrorDialog(
-        context: context,
-        title: 'Session Expired',
-        message: 'Session expired. Please login again.',
-        onPressed: () {
-          Navigator.of(context).pop();
-          Navigator.pushNamedAndRemoveUntil(
-            context,
-            '/login',
-            (route) => false,
-          );
-        },
-      );
-    } else {
       CustomDialogs.showErrorDialog(
         context: context,
         title: 'PIN Change Error',
         message: 'PIN change error: $e',
       );
-    }
     } finally {
       setState(() {
         _isLoading = false;

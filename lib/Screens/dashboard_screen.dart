@@ -276,14 +276,29 @@ class _DashboardScreenState extends State<DashboardScreen> {
       String? authToken;
       if (_loginData != null && _loginData!['data'] != null) {
         final actualData = _loginData!['data'] as Map<String, dynamic>;
-        authToken = actualData['Token'];
+        authToken = actualData['Token'] ?? actualData['token'] ?? actualData['accessToken'];
+      }
+      if (authToken == null || authToken.isEmpty) {
+        try {
+          final prefs = await SharedPreferences.getInstance();
+          authToken = prefs.getString('authToken');
+        } catch (_) {}
       }
       
       if (authToken == null || authToken.isEmpty) {
         return;
       }
       
-      final response = await ApiService.refreshDashboard(token: authToken);
+      Map<String, dynamic> response = await ApiService.refreshDashboard(token: authToken);
+      if (response['tokenValid'] == false) {
+        try {
+          final prefs = await SharedPreferences.getInstance();
+          final stored = prefs.getString('authToken');
+          if (stored != null && stored.isNotEmpty && stored != authToken) {
+            response = await ApiService.refreshDashboard(token: stored);
+          }
+        } catch (_) {}
+      }
       
       if (response['success']) {
         setState(() {

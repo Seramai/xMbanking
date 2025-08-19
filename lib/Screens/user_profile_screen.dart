@@ -313,8 +313,15 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                             SizedBox(
                               width: double.infinity,
                               child: OutlinedButton.icon(
-                            onPressed: () {
-                              if (widget.authToken == null || widget.authToken!.isEmpty) {
+                            onPressed: () async {
+                              String tokenToUse = widget.authToken ?? '';
+                              if (tokenToUse.isEmpty) {
+                                try {
+                                  final prefs = await SharedPreferences.getInstance();
+                                  tokenToUse = prefs.getString('authToken') ?? '';
+                                } catch (_) {}
+                              }
+                              if (tokenToUse.isEmpty) {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
                                     content: Text('Authentication error. Please login again to change PIN.'),
@@ -323,12 +330,11 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                                 );
                                 return;
                               }
-                              
                               Navigator.pushNamed(
                                 context,
                                 '/change-pin',
                                 arguments: {
-                                  'authToken': widget.authToken!,
+                                  'authToken': tokenToUse,
                                   'isFirstTime': false,
                                   'username': _cachedUsername ?? widget.username,
                                   'email': _cachedEmail ?? widget.email,
