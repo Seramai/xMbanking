@@ -147,13 +147,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
         actualData = _loginData!;
       }
       
-      final currencyCode = actualData['CurrencyCode'] ?? '';
-      final currencySymbol = currencyCode;
+      final dynamic rawCurrency = actualData['CurrencyCode'];
+      final String codeFromData = (rawCurrency is String ? rawCurrency : rawCurrency?.toString() ?? '').trim();
+      final String resolvedCode = codeFromData.isNotEmpty ? codeFromData : _currentCurrencyCode;
+      final String currencySymbol = resolvedCode;
       
-      setState(() {
-        _currentCurrencyCode = currencyCode;
-        _currentCurrencySymbol = currencySymbol;
-      });
+      if (resolvedCode.isNotEmpty) {
+        setState(() {
+          _currentCurrencyCode = resolvedCode;
+          _currentCurrencySymbol = currencySymbol;
+        });
+      }
     }
   }
   void _loadApiData() {
