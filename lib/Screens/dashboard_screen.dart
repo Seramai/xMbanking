@@ -172,6 +172,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
     } else {
       actualData = _loginData!;
     }
+    try {
+      final dynamic tokenCandidate = actualData['Token'] ?? actualData['token'] ?? actualData['accessToken'];
+      final String latestToken = (tokenCandidate is String ? tokenCandidate : tokenCandidate?.toString() ?? '').trim();
+      if (latestToken.isNotEmpty) {
+        SharedPreferences.getInstance().then((prefs) {
+          prefs.setString('authToken', latestToken);
+        });
+      }
+    } catch (_) {}
     final balance = actualData['balance'];
     if (balance != null && balance['Balance'] != null) {
       final newBalance = balance['Balance'].toDouble();
@@ -450,13 +459,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  void _handleSendToSacco() {
+  Future<void> _handleSendToSacco() async {
     String? authToken;
     if (_loginData != null && _loginData!['data'] != null) {
       final actualData = _loginData!['data'] as Map<String, dynamic>;
-      authToken = actualData['Token']; 
+      authToken = actualData['Token'] ?? actualData['token'] ?? actualData['accessToken']; 
     }
-    
+    if (authToken == null || authToken.isEmpty) {
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        authToken = prefs.getString('authToken');
+      } catch (_) {}
+    }
     if (authToken == null || authToken.isEmpty) {
       CustomDialogs.showErrorDialog(
         context: context,
@@ -465,7 +479,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
       );
       return;
     }
-    
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -499,13 +512,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
       },
     );
   }
-  void _handleSendToMTN() {
+  Future<void> _handleSendToMTN() async {
     String? authToken;
     if (_loginData != null && _loginData!['data'] != null) {
       final actualData = _loginData!['data'] as Map<String, dynamic>;
-      authToken = actualData['Token']; 
+      authToken = actualData['Token'] ?? actualData['token'] ?? actualData['accessToken']; 
     }
-    
+    if (authToken == null || authToken.isEmpty) {
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        authToken = prefs.getString('authToken');
+      } catch (_) {}
+    }
     if (authToken == null || authToken.isEmpty) {
       CustomDialogs.showErrorDialog(
         context: context,
@@ -514,7 +532,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
       );
       return;
     }
-
     showDialog(
       context: context,
       builder: (BuildContext context) {

@@ -106,6 +106,7 @@ class ApiConfig{
       'Content-Type': 'application/json',
       'Authorization': 'Bearer $token',
       'Accept': 'application/json',
+      'ApiKey': apiKey,
     };
   }
   // getting the headers that will be used in the api

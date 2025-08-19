@@ -402,6 +402,7 @@ class ApiService {
         return {
           'success': false,
           'message': 'Unauthorized - please login again',
+          'tokenValid': false,
         };
       } else {
         return {
@@ -734,6 +735,7 @@ class ApiService {
         return {
           'success': false,
           'message': 'Unauthorized - please login again',
+          'tokenValid': false,
         };
       } else {
         return {

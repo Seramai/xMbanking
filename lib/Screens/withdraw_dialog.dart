@@ -167,6 +167,22 @@ class _WithdrawDialogState extends State<WithdrawDialog> {
         if (result['success'] == true) {
           _showStkPushDialog(); 
         } else {
+          final message = (result['message'] ?? '').toString().toLowerCase();
+          if (result['tokenValid'] == false || message.contains('unauthorized') || message.contains('token')) {
+            CustomDialogs.showErrorDialog(
+              context: context,
+              title: 'Authentication Error',
+              message: 'Your session has expired. Please login again to continue.',
+              onPressed: () {
+                Navigator.of(context).pop();
+                Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+              },
+            );
+            setState(() {
+              _isProcessing = false;
+            });
+            return;
+          }
           CustomDialogs.showErrorDialog(
             context: context,
             title: 'Transaction Failed',
