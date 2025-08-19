@@ -9,6 +9,9 @@ import 'Screens/notifications_screen.dart';
 import 'Screens/change_pin_screen.dart';
 import 'Screens/splash_screen.dart'; 
 import 'Config/api_config.dart';
+import 'Widgets/inactivity_logout.dart';
+
+final GlobalKey<NavigatorState> appNavigatorKey = GlobalKey<NavigatorState>();
 
 
 void main() async{
@@ -39,7 +42,13 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    return InactivityLogout(
+      timeout: const Duration(minutes: 3),
+      onTimeout: () {
+        appNavigatorKey.currentState?.pushNamedAndRemoveUntil('/login', (route) => false);
+      },
+      child: MaterialApp(
+      navigatorKey: appNavigatorKey,
       title: 'Flutter Demo',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
@@ -102,6 +111,7 @@ class MyApp extends StatelessWidget {
         '/notifications': (context) => const NotificationsScreen(),
       },
       initialRoute: '/',
+    ),
     );
   }
 }
