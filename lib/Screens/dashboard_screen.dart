@@ -11,7 +11,9 @@ import 'dart:typed_data';
 import 'deposit_dialog.dart';
 import 'withdraw_dialog.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../Services/token_manager.dart';
 import 'dart:convert';
+import '../Utils/phone_utils.dart';
 import 'menu_drawer_screen.dart';
 import '../Utils/status_messages.dart';
 
@@ -49,7 +51,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   File? _cachedImageFile;
   String? _cachedEmail;
   bool _isRefreshing = false;
-
+// this triggers the data initialization process
   @override
   void initState() {
     super.initState();
@@ -77,6 +79,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         if (args['loginData'] != null) {
           setState(() {
             _loginData = args['loginData'];
+            // token extracted here
             String? extractedPhoneFromToken;
             try {
               if (args['loginData']?['data']?['Token'] != null) {
@@ -92,16 +95,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   extractedPhoneFromToken = tokenData['UserName']; 
                 }
               }
-            } catch (e) {
-              print("Dashboard - Error extracting phone from token: $e");
-            }
+            } catch (e) {}
             _userMobileNumber = extractedPhoneFromToken ?? 
                               args['mobileNumber'] ?? 
                               args['phoneNumber'] ?? 
                               widget.username;
-            if (args['loginData']?['data'] != null) {
-              print("Dashboard - Available data keys: ${args['loginData']['data'].keys}");
-            }
             if (args['useStoredData'] == true || 
                 _loginData?['needsRefresh'] == true ||
                 _loginData?['data']?['balance'] == null) {
@@ -162,6 +160,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       }
     }
   }
+  // prevents processing data that is null
   void _loadApiData() {
     if (_loginData == null) {
       return;
@@ -177,9 +176,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       final dynamic tokenCandidate = actualData['Token'] ?? actualData['token'] ?? actualData['accessToken'];
       final String latestToken = (tokenCandidate is String ? tokenCandidate : tokenCandidate?.toString() ?? '').trim();
       if (latestToken.isNotEmpty) {
-        SharedPreferences.getInstance().then((prefs) {
-          prefs.setString('authToken', latestToken);
-        });
+        TokenManager.setToken(latestToken);
       }
     } catch (_) {}
     final balance = actualData['balance'];
@@ -211,9 +208,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
       String? phoneKey;
       final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
       if (args != null && args['mobileNumber'] != null) {
-        phoneKey = args['mobileNumber'];
+        phoneKey = PhoneUtils.canonicalPhoneKey(args['mobileNumber']);
       } else if (_userMobileNumber != null) {
-        phoneKey = _userMobileNumber;
+        phoneKey = PhoneUtils.canonicalPhoneKey(_userMobileNumber!);
       }
       
       String? cachedEmail;
@@ -239,17 +236,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
         if (cachedImageBytes != null) {
           try {
             _cachedImageBytes = base64Decode(cachedImageBytes);
-          } catch (e) {
-            print("Error decoding cached image bytes: $e");
-          }
+          } catch (e) {}
         }
         if (cachedImagePath != null && !kIsWeb) {
           _cachedImageFile = File(cachedImagePath);
         }
       });
-    } catch (e) {
-      print("Error loading registration data from cache: $e");
-    }
+    } catch (e) {}
   }
   Future<void> _loadStoredData() async {
     try {
@@ -262,9 +255,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           _loadApiData();
         });
       }
-    } catch (e) {
-      print('Error loading stored data: $e');
-    }
+    } catch (e) {}
   }
   Future<void> _refreshDashboard() async {
     if (_isRefreshing) return;
@@ -280,13 +271,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
         authToken = actualData['Token'] ?? actualData['token'] ?? actualData['accessToken'];
       }
       if (authToken == null || authToken.isEmpty) {
-        try {
-          final prefs = await SharedPreferences.getInstance();
-          authToken = prefs.getString('authToken');
-        } catch (_) {}
+        authToken = await TokenManager.getToken();
       }
       
-      if (authToken == null || authToken.isEmpty) {
+      if (authToken.isEmpty) {
         return;
       }
       
@@ -369,9 +357,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             }
           }
         }
-      } catch (e) {
-        print('Date parsing error: $e');
-      }
+      } catch (e) {}
       TransactionType type;
       if (description.toLowerCase().contains('deposit')) {
         type = TransactionType.credit;
@@ -420,15 +406,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
           try {
             final dateTime = DateTime.parse('$lastDate $lastTime');
             return DateFormat('dd MMMM yyyy, HH:mm').format(dateTime);
-          } catch (e) {
-            print('Date parsing error: $e');
-          }
+          } catch (e) {}
         }
       }
     }
     final now = DateTime.now();
     final lastLogin = now.subtract(const Duration(hours: 2, minutes: 18));
     return DateFormat('dd MMMM yyyy, HH:mm').format(lastLogin);
+  }
+  bool get _isAccountBadStatus {
+    try {
+      final data = _loginData?['data'] ?? _loginData;
+      if (data is Map<String, dynamic>) {
+        final status = (data['Status'] ?? data['status'] ?? '').toString().toLowerCase();
+        return status.isNotEmpty && status != 'active' && status != 'ok';
+      }
+    } catch (_) {}
+    return false;
   }
   void _toggleBalance() {
     setState(() {
@@ -669,6 +663,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                 ),
+                                if (_isAccountBadStatus) ...[
+                                  const SizedBox(height: 6),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: Colors.red.withOpacity(0.9),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: const Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(Icons.error_outline, color: Colors.white, size: 14),
+                                        SizedBox(width: 6),
+                                        Text('Account status: Attention required', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
+                                      ],
+                                    ),
+                                  ),
+                                ],
                               ],
                             ),
                           ),
@@ -939,7 +951,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             ),
                           ),
                           GestureDetector(
-                            onTap: _viewFullStatement,
+                            onTap: () {
+                              Navigator.pushNamed(
+                                context,
+                                '/transactions',
+                                arguments: {
+                                  'transactions': _apiTransactions,
+                                  'currencyCode': _currentCurrencyCode,
+                                },
+                              );
+                            },
                             child: Text(
                               'View All',
                               style: TextStyle(

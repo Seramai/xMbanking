@@ -9,6 +9,7 @@ import 'Screens/notifications_screen.dart';
 import 'Screens/change_pin_screen.dart';
 import 'Screens/edit_profile_screen.dart';
 import 'Screens/splash_screen.dart'; 
+import 'Screens/transactions_screen.dart';
 import 'Config/api_config.dart';
 import 'Widgets/inactivity_logout.dart';
 
@@ -31,9 +32,7 @@ void main() async{
   ));
   try{
     await ApiConfig.initialize();
-    print(" App initialized successfully");
   } catch(e){
-    print("failed to initialize app $e");
   }
    runApp(const MyApp());
 }
@@ -118,6 +117,13 @@ class MyApp extends StatelessWidget {
           );
         },
         '/notifications': (context) => const NotificationsScreen(),
+        '/transactions': (context) {
+          final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>?;
+          return TransactionsScreen(
+            transactions: args?['transactions'] ?? const [],
+            currencyCode: args?['currencyCode'] ?? '',
+          );
+        },
       },
       initialRoute: '/',
     ),

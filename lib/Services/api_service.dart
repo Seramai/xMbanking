@@ -35,8 +35,7 @@ class ApiService {
         "EmailAddress": emailAddress,
       };
       
-      print("Validating registration for $emailAddress");
-      print("Request body: ${jsonEncode(requestBody)}");
+      
       
       final response = await http.post(
         Uri.parse(ApiConfig.validateRegistrationUrl),
@@ -49,8 +48,7 @@ class ApiService {
         },
       );
       
-      print("Response status: ${response.statusCode}");
-      print("Response body: ${response.body}");
+      
       
       if (response.statusCode == 200) {
         final responseData = jsonDecode(response.body);
@@ -78,7 +76,7 @@ class ApiService {
         'message': 'No internet connection - please check your network',
       };
     } catch (e) {
-      print("Validation error: $e");
+      
       if (e.toString().contains('timeout')) {
         return {
           'success': false,
@@ -106,26 +104,26 @@ class ApiService {
     String? signatureFileName,
   }) async {
     try {
-      print("Starting registration for: $emailAddress");
+      
       
       // Convert images to base64(first checks if the image bytes and image file is provided and then converts and then adds the prefix data:image/jpeg;base64 )
       String? selfieBase64;
       String? signatureBase64;
       if (profileImageBytes != null && profileImageBytes.isNotEmpty) {
         selfieBase64 = 'data:image/jpeg;base64,${base64Encode(profileImageBytes)}';
-        print("Added profile image (${profileImageBytes.length} bytes)");
+        
       } else if (profileImageFile != null) {
         final bytes = await profileImageFile.readAsBytes();
         selfieBase64 = 'data:image/jpeg;base64,${base64Encode(bytes)}';
-        print("Added profile image from file");
+        
       }
       if (signatureBytes != null && signatureBytes.isNotEmpty) {
         signatureBase64 = 'data:image/jpeg;base64,${base64Encode(signatureBytes)}';
-        print("Added signature image (${signatureBytes.length} bytes)");
+        
       } else if (signatureFile != null) {
         final bytes = await signatureFile.readAsBytes();
         signatureBase64 = 'data:image/jpeg;base64,${base64Encode(bytes)}';
-        print("Added signature image from file");
+        
       }
       final requestBody = {
         "ClientId": clientId,
@@ -139,8 +137,7 @@ class ApiService {
         "Signature": signatureBase64,
       };
 
-      print("Sending registration request");
-      print("Request body keys: ${requestBody.keys.toList()}");
+      
       final response = await http.post(
         Uri.parse(ApiConfig.registrationUrl),
         headers: ApiConfig.headers,
@@ -152,8 +149,7 @@ class ApiService {
         },
       );
       
-      print("Registration response status: ${response.statusCode}");
-      print("Registration response body: ${response.body}");
+      
       if (response.statusCode == 200 || response.statusCode == 201) {
         final responseData = jsonDecode(response.body);
         return {
@@ -180,7 +176,7 @@ class ApiService {
         'message': 'No internet connection - please check your network',
       };
     } catch (e) {
-      print("Registration error: $e");
+      
       if (e.toString().contains('timeout')) {
         return {
           'success': false,
@@ -207,8 +203,7 @@ class ApiService {
         "DeviceDetails": deviceDetails,
       };
       
-      print("Attempting login for: $mobileNumber");
-      print("Request body: ${jsonEncode(requestBody)}");
+      
       
       final response = await http.post(
         Uri.parse(ApiConfig.loginUrl),
@@ -221,8 +216,7 @@ class ApiService {
         },
       );
       
-      print("Login response status: ${response.statusCode}");
-      print("Login response body: ${response.body}");
+      
       
       if (response.statusCode == 200) {
         final responseData = jsonDecode(response.body);
@@ -257,7 +251,7 @@ class ApiService {
         'message': 'No internet connection - please check your network',
       };
     } catch (e) {
-      print("Login error: $e");
+      
       if (e.toString().contains('timeout')) {
         return {
           'success': false,
@@ -281,8 +275,7 @@ class ApiService {
         "Otp": otpCode,
       };
       
-      print("Verifying OTP for UserId: $userId");
-      print("Request body: ${jsonEncode(requestBody)}");
+      
       
       final response = await http.post(
         Uri.parse(ApiConfig.otpUrl),
@@ -295,8 +288,7 @@ class ApiService {
         },
       );
       
-      print("OTP verification response status: ${response.statusCode}");
-      print("OTP verification response body: ${response.body}");
+      
       
       if (response.statusCode == 200) {
         final responseData = jsonDecode(response.body);
@@ -324,7 +316,7 @@ class ApiService {
         'message': 'No internet connection - please check your network',
       };
     } catch (e) {
-      print("OTP verification error: $e");
+      
       if (e.toString().contains('timeout')) {
         return {
           'success': false,
@@ -353,22 +345,17 @@ class ApiService {
         "Remarks": cleanedRemarks,
       };
       
-      print("Processing deposit for: $phoneNumber");
-      print("Deposit URL: ${ApiConfig.depositUrl}");
-      print("Request headers: ${ApiConfig.getTransactionHeaders(token)}"); 
-      print("Request body: ${jsonEncode(requestBody)}");
+      
       try {
         final connectivity = await Connectivity().checkConnectivity();
-        print("Network connectivity: $connectivity");
+        
         if (connectivity == ConnectivityResult.none) {
           return {
             'success': false,
             'message': 'No internet connection - please check your network',
           };
         }
-      } catch (e) {
-        print("Connectivity check failed: $e");
-      }
+      } catch (e) {}
 
       final response = await http.post(
         Uri.parse(ApiConfig.depositUrl),
@@ -381,8 +368,7 @@ class ApiService {
         },
       );
       
-      print("Deposit response status: ${response.statusCode}");
-      print("Deposit response body: ${response.body}");
+      
       
       if (response.statusCode == 200 || response.statusCode == 201) {
         final responseData = jsonDecode(response.body);
@@ -410,25 +396,25 @@ class ApiService {
         };
       }
     } on SocketException catch (e) {
-      print("Socket Exception: $e");
+      
       return {
         'success': false,
         'message': 'Network error - please check your internet connection',
       };
     } on http.ClientException catch (e) {
-      print("HTTP Client Exception: $e");
+      
       return {
         'success': false,
         'message': 'Connection failed - please try again',
       };
     } on FormatException catch (e) {
-      print("Format Exception: $e");
+      
       return {
         'success': false,
         'message': 'Invalid server response format',
       };
     } catch (e) {
-      print("Deposit error: $e");
+      
       if (e.toString().contains('timeout')) {
         return {
           'success': false,
@@ -460,22 +446,17 @@ class ApiService {
         "ConfirmNewPin": confirmNewPin,
       };
       
-      print("Processing PIN change");
-      print("Change PIN URL: ${ApiConfig.changePinUrl}");
-      print("Request headers: ${ApiConfig.getTransactionHeaders(token)}"); 
-      print("Request body: ${jsonEncode(requestBody)}");
+      
       try {
         final connectivity = await Connectivity().checkConnectivity();
-        print("Network connectivity: $connectivity");
+        
         if (connectivity == ConnectivityResult.none) {
           return {
             'success': false,
             'message': 'No internet connection - please check your network',
           };
         }
-      } catch (e) {
-        print("Connectivity check failed: $e");
-      }
+      } catch (e) {}
 
       final response = await http.post(
         Uri.parse(ApiConfig.changePinUrl),
@@ -488,8 +469,7 @@ class ApiService {
         },
       );
       
-      print("Change PIN response status: ${response.statusCode}");
-      print("Change PIN response body: ${response.body}");
+      
       
       if (response.statusCode == 200 || response.statusCode == 201 || response.statusCode == 202) {
         final responseData = jsonDecode(response.body);
@@ -522,25 +502,25 @@ class ApiService {
         };
       }
     } on SocketException catch (e) {
-      print("Socket Exception: $e");
+      
       return {
         'success': false,
         'message': 'Network error - please check your internet connection',
       };
     } on http.ClientException catch (e) {
-      print("HTTP Client Exception: $e");
+      
       return {
         'success': false,
         'message': 'Connection failed - please try again',
       };
     } on FormatException catch (e) {
-      print("Format Exception: $e");
+      
       return {
         'success': false,
         'message': 'Invalid server response format',
       };
     } catch (e) {
-      print("Change PIN error: $e");
+      
       if (e.toString().contains('timeout')) {
         return {
           'success': false,
@@ -563,20 +543,17 @@ class ApiService {
     required String token,
   }) async {
     try {
-      print("Refreshing dashboard data with token: ${token.substring(0, 20)}...");
-      print("Dashboard refresh URL: ${ApiConfig.dashboardReloadUrl}");
+      
       try {
         final connectivity = await Connectivity().checkConnectivity();
-        print("Network connectivity: $connectivity");
+        
         if (connectivity == ConnectivityResult.none) {
           return {
             'success': false,
             'message': 'No internet connection - please check your network',
           };
         }
-      } catch (e) {
-        print("Connectivity check failed: $e");
-      }
+      } catch (e) {}
       final response = await http.get(
         Uri.parse(ApiConfig.dashboardReloadUrl),
         headers: ApiConfig.getTransactionHeaders(token),
@@ -587,8 +564,7 @@ class ApiService {
         },
       );
       
-      print("Dashboard refresh response status: ${response.statusCode}");
-      print("Dashboard refresh response body: ${response.body}");
+      
       
       if (response.statusCode == 200) {
         final responseData = jsonDecode(response.body);
@@ -627,28 +603,28 @@ class ApiService {
       }
     } 
     on SocketException catch (e) {
-      print("Socket Exception: $e");
+      
       return {
         'success': false,
         'message': 'Network error - please check your internet connection',
         'tokenValid': true, 
       };
     } on http.ClientException catch (e) {
-      print("HTTP Client Exception: $e");
+      
       return {
         'success': false,
         'message': 'Connection failed - please try again',
         'tokenValid': true,
       };
     } on FormatException catch (e) {
-      print("Format Exception: $e");
+      
       return {
         'success': false,
         'message': 'Invalid server response format',
         'tokenValid': true,
       };
     } catch (e) {
-      print("Dashboard refresh error: $e");
+      
       if (e.toString().contains('timeout')) {
         return {
           'success': false,
@@ -685,22 +661,17 @@ class ApiService {
         "Remarks": cleanedRemarks,
       };
       
-      print("Processing withdrawal for: $phoneNumber");
-      print("Withdraw URL: ${ApiConfig.withdrawUrl}");
-      print("Request headers: ${ApiConfig.getTransactionHeaders(token)}"); 
-      print("Request body: ${jsonEncode(requestBody)}");
+      
       try {
         final connectivity = await Connectivity().checkConnectivity();
-        print("Network connectivity: $connectivity");
+        
         if (connectivity == ConnectivityResult.none) {
           return {
             'success': false,
             'message': 'No internet connection - please check your network',
           };
         }
-      } catch (e) {
-        print("Connectivity check failed: $e");
-      }
+      } catch (e) {}
 
       final response = await http.post(
         Uri.parse(ApiConfig.withdrawUrl),
@@ -713,8 +684,7 @@ class ApiService {
         },
       );
       
-      print("Withdraw response status: ${response.statusCode}");
-      print("Withdraw response body: ${response.body}");
+      
       
       if (response.statusCode == 200 || response.statusCode == 201 || response.statusCode == 202) {
         final responseData = jsonDecode(response.body);
@@ -742,25 +712,25 @@ class ApiService {
         };
       }
     } on SocketException catch (e) {
-      print("Socket Exception: $e");
+      
       return {
         'success': false,
         'message': 'Network error - please check your internet connection',
       };
     } on http.ClientException catch (e) {
-      print("HTTP Client Exception: $e");
+      
       return {
         'success': false,
         'message': 'Connection failed - please try again',
       };
     } on FormatException catch (e) {
-      print("Format Exception: $e");
+      
       return {
         'success': false,
         'message': 'Invalid server response format',
       };
     } catch (e) {
-      print("Withdrawal error: $e");
+      
       if (e.toString().contains('timeout')) {
         return {
           'success': false,
@@ -862,7 +832,7 @@ class ApiService {
       
       return deviceDetails;
     } catch (e) {
-      print("Error getting device details: $e");
+      
       return {
         "DeviceId": "unknown_device_${DateTime.now().millisecondsSinceEpoch}",
         "Model": "Unknown",

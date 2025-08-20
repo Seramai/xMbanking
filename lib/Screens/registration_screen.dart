@@ -11,6 +11,7 @@ import 'dart:io';
 import 'dart:typed_data';
 import '../Utils/validators.dart';
 import '../Utils/status_messages.dart';
+import '../Utils/phone_utils.dart';
 
 class RegistrationScreen extends StatefulWidget {
   const RegistrationScreen({super.key});
@@ -364,7 +365,7 @@ Future<void> _pickSignature() async {
   Future<void> _saveRegistrationDataToCache(String email, dynamic imageData, String fullName) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      String phoneKey = _mobileController.text.trim();
+      String phoneKey = PhoneUtils.canonicalPhoneKey(_mobileController.text.trim());
       await prefs.setString('user_${phoneKey}_email', email);
       await prefs.setString('user_${phoneKey}_fullName', fullName);
       
@@ -384,9 +385,7 @@ Future<void> _pickSignature() async {
       } else if (_selfieImage != null) {
         await prefs.setString('registration_profileImage_path', _selfieImage!.path);
       }
-    } catch (e) {
-      print("Error saving registration data to cache: $e");
-    }
+    } catch (e) {}
   }
 
   Widget _buildStep1() {

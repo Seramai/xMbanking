@@ -9,6 +9,7 @@ import 'dart:io';
 import 'dart:typed_data';
 import 'package:sms_autofill/sms_autofill.dart';
 import 'package:otp_autofill/otp_autofill.dart';
+import '../Services/token_manager.dart';
 
 class OTPVerificationScreen extends StatefulWidget {
   final String email;
@@ -208,7 +209,7 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> with Code
         // Storing data locally
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('loginData', jsonEncode(completeLoginData));
-        await prefs.setString('authToken', authToken ?? '');
+        await TokenManager.setToken(authToken ?? '');
         await prefs.setString('userId', widget.userId);
         await prefs.setString('userEmail', widget.email);
         await prefs.setString('userMobile', widget.mobileNumber);
@@ -262,7 +263,6 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> with Code
         _clearOTP();
       }
     } catch (e) {
-      print("OTP verification error: $e");
       CustomDialogs.showErrorDialog(
         context: context, 
         title: 'Verification Error', 

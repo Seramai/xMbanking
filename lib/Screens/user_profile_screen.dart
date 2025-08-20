@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
+import '../Utils/phone_utils.dart';
 import '../Utils/status_messages.dart';
 
 class UserProfileScreen extends StatefulWidget {
@@ -51,18 +52,19 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       String? cachedImageBytes;
       String? cachedImagePath;
       if (widget.mobileNumber != null) {
-        cachedEmail = prefs.getString('user_${widget.mobileNumber}_email');
-        cachedUsername = prefs.getString('user_${widget.mobileNumber}_fullName');
-        cachedImageBytes = prefs.getString('user_${widget.mobileNumber}_profileImage_bytes');
-        cachedImagePath = prefs.getString('user_${widget.mobileNumber}_profileImage_path');
-        print("Loading profile cached data for phone: ${widget.mobileNumber}");
+        final key = PhoneUtils.canonicalPhoneKey(widget.mobileNumber!);
+        cachedEmail = prefs.getString('user_${key}_email');
+        cachedUsername = prefs.getString('user_${key}_fullName');
+        cachedImageBytes = prefs.getString('user_${key}_profileImage_bytes');
+        cachedImagePath = prefs.getString('user_${key}_profileImage_path');
+        
       }
       if (cachedEmail == null) {
         cachedEmail = prefs.getString('registration_email');
         cachedUsername = prefs.getString('registration_fullName');
         cachedImageBytes = prefs.getString('registration_profileImage_bytes');
         cachedImagePath = prefs.getString('registration_profileImage_path');
-        print("Using fallback generic cache data in profile");
+        
       }
       
       setState(() {
@@ -72,9 +74,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         if (cachedImageBytes != null) {
           try {
             _cachedImageBytes = base64Decode(cachedImageBytes);
-          } catch (e) {
-            print("Error decoding cached image bytes in profile: $e");
-          }
+          } catch (e) {}
         }
         
         if (cachedImagePath != null && !kIsWeb) {
@@ -82,9 +82,9 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         }
       });
       
-      print("Profile cached data loaded - Email: $cachedEmail, Username: $cachedUsername, HasImage: ${_cachedImageBytes != null || _cachedImageFile != null}");
+      
     } catch (e) {
-      print("Error loading registration data from cache in profile: $e");
+      
     }
   }
 

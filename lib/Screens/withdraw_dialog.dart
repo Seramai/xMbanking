@@ -4,6 +4,7 @@ import '../Services/api_service.dart';
 import 'package:intl/intl.dart';
 import '../Widgets/custom_dialogs.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../Services/token_manager.dart';
 import '../Utils/status_messages.dart';
 import '../Utils/validators.dart';
 import '../Utils/phone_utils.dart';
@@ -64,15 +65,13 @@ class _WithdrawDialogState extends State<WithdrawDialog> {
       if (widget.authToken != null && widget.authToken!.isNotEmpty) {
         _cachedToken = widget.authToken;
       } else {
-        final prefs = await SharedPreferences.getInstance();
-        _cachedToken = prefs.getString('authToken') ?? '';
+        _cachedToken = await TokenManager.getToken();
       }
       
       if (mounted) {
         setState(() {});
       }
     } catch (e) {
-      print("Error loading cached token: $e");
       _cachedToken = '';
     }
   }

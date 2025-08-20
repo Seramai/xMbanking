@@ -13,9 +13,9 @@ class ApiConfig{
         throw Exception("Missing required environment variables");
       }
       
-      print("Environment variables loaded successfully");
+      
     } catch (e) {
-      print("Error loading .env: $e");
+      
       throw Exception("Failed to load environment configuration: $e");
     }
   }
@@ -125,11 +125,6 @@ class ApiConfig{
     };
   }
   static void printConfig(){
-    print("API Configuration:");
-    print("Base URL: $baseUrl");
-    print("Validate URL: $validateRegistrationUrl");
-    print("Register URL: $registrationUrl");
-    print("Login URL: $loginUrl");
-    print("API Key: ${apiKey.substring(0, 8)}...");
+    
   }
 }

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import '../Services/api_service.dart';
 import '../Widgets/custom_dialogs.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../Services/token_manager.dart';
 import '../Utils/validators.dart';
 import '../Utils/phone_utils.dart';
 
@@ -69,9 +70,7 @@ class _DepositDialogState extends State<DepositDialog> {
         String? authToken = widget.authToken;
 
         if (authToken.isEmpty) {
-          final prefs = await SharedPreferences.getInstance();
-          authToken = prefs.getString('authToken') ?? '';
-          
+          authToken = await TokenManager.getToken();
           if (authToken.isEmpty) {
             CustomDialogs.showErrorDialog(
               context: context,

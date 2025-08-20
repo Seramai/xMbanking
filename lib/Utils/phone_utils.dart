@@ -16,6 +16,10 @@ class PhoneUtils {
     }
     return cleaned;
   }
+
+  static String canonicalPhoneKey(String phone) {
+    return formatToLocal(phone);
+  }
 }
 
 
