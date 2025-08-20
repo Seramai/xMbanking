@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../Utils/status_messages.dart';
 
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
@@ -78,24 +79,14 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         notification.isRead = true;
       }
     });
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('All notifications marked as read', style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.green,
-      ),
-    );
+    StatusMessages.success(context, message: 'All notifications marked as read');
   }
 
   void _deleteNotification(String notificationId) {
     setState(() {
       _notifications.removeWhere((n) => n.id == notificationId);
     });
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Notification deleted', style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.orange,
-      ),
-    );
+    StatusMessages.info(context, message: 'Notification deleted');
   }
 
   Color _getNotificationColor(NotificationType type) {
@@ -376,15 +367,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                           if (!notification.isRead) {
                             _markAsRead(notification.id);
                           }
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                'Tapped: ${notification.title}',
-                                style: const TextStyle(fontWeight: FontWeight.bold),
-                              ),
-                              duration: const Duration(seconds: 1),
-                            ),
-                          );
+                          StatusMessages.info(context, message: 'Tapped: ${notification.title}', duration: const Duration(seconds: 1));
                         },
                       ),
                     ),

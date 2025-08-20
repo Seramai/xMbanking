@@ -402,7 +402,6 @@ class ApiService {
         return {
           'success': false,
           'message': 'Unauthorized - please login again',
-          'tokenValid': false,
         };
       } else {
         return {
@@ -510,7 +509,6 @@ class ApiService {
         return {
           'success': false,
           'message': 'Unauthorized - please login again',
-          'tokenValid': false,
         };
       } else if (response.statusCode == 403) {
         return {
@@ -736,7 +734,6 @@ class ApiService {
         return {
           'success': false,
           'message': 'Unauthorized - please login again',
-          'tokenValid': false,
         };
       } else {
         return {

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../Services/api_service.dart';
+import '../Utils/validators.dart';
 import '../Widgets/custom_dialogs.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -42,51 +43,6 @@ class _ChangePinScreenState extends State<ChangePinScreen> {
     _newPinController.dispose();
     _confirmPinController.dispose();
     super.dispose();
-  }
-
-  String? _validateCurrentPin(String? value) {
-    if (value == null || value.isEmpty) {
-      return 'Current PIN is required';
-    }
-    if (value.length != 6) {
-      return 'PIN must be exactly 6 digits';
-    }
-    if (!RegExp(r'^[0-9]+$').hasMatch(value)) {
-      return 'PIN must contain only numbers';
-    }
-    return null;
-  }
-
-  String? _validateNewPin(String? value) {
-    if (value == null || value.isEmpty) {
-      return 'New PIN is required';
-    }
-    if (value.length != 6) {
-      return 'PIN must be exactly 6 digits';
-    }
-    if (!RegExp(r'^[0-9]+$').hasMatch(value)) {
-      return 'PIN must contain only numbers';
-    }
-    if (value == _currentPinController.text) {
-      return 'New PIN must be different from current PIN';
-    }
-    return null;
-  }
-
-  String? _validateConfirmPin(String? value) {
-    if (value == null || value.isEmpty) {
-      return 'Confirm PIN is required';
-    }
-    if (value.length != 6) {
-      return 'PIN must be exactly 6 digits';
-    }
-    if (!RegExp(r'^[0-9]+$').hasMatch(value)) {
-      return 'PIN must contain only numbers';
-    }
-    if (value != _newPinController.text) {
-      return 'Confirm PIN does not match New PIN';
-    }
-    return null;
   }
 
   Future<void> _changePin() async {
@@ -201,7 +157,6 @@ class _ChangePinScreenState extends State<ChangePinScreen> {
           title: Text(widget.isFirstTime ? 'Set Your PIN' : 'Change PIN'),
           backgroundColor: Theme.of(context).primaryColor,
           foregroundColor: Colors.white,
-          // Hide back button for first-time users
           automaticallyImplyLeading: !widget.isFirstTime,
         ),
         body: Container(
@@ -272,7 +227,7 @@ class _ChangePinScreenState extends State<ChangePinScreen> {
                           children: [
                             TextFormField(
                               controller: _currentPinController,
-                              validator: _validateCurrentPin,
+                              validator: Validators.requiredExactLengthDigits('Current PIN', 6),
                               keyboardType: TextInputType.number,
                               obscureText: !_isCurrentPinVisible,
                               maxLength: 6,
@@ -308,7 +263,12 @@ class _ChangePinScreenState extends State<ChangePinScreen> {
                             const SizedBox(height: 20),
                             TextFormField(
                               controller: _newPinController,
-                              validator: _validateNewPin,
+                              validator: Validators.pin(
+                                minLength: 6,
+                                maxLength: 6,
+                                disallowEqualTo: () => _currentPinController.text,
+                                disallowEqualMessage: 'New PIN must be different from current PIN',
+                              ),
                               keyboardType: TextInputType.number,
                               obscureText: !_isNewPinVisible,
                               maxLength: 6,
@@ -350,7 +310,11 @@ class _ChangePinScreenState extends State<ChangePinScreen> {
                             const SizedBox(height: 20),
                             TextFormField(
                               controller: _confirmPinController,
-                              validator: _validateConfirmPin,
+                              validator: Validators.confirmMatch(
+                                label: 'Confirm PIN',
+                                otherValue: () => _newPinController.text,
+                                mismatchMessage: 'Confirm PIN does not match New PIN',
+                              ),
                               keyboardType: TextInputType.number,
                               obscureText: !_isConfirmPinVisible,
                               maxLength: 6,

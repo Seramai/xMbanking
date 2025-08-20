@@ -9,6 +9,8 @@ import 'dart:convert';
 import '../Services/api_service.dart';
 import 'dart:io';
 import 'dart:typed_data';
+import '../Utils/validators.dart';
+import '../Utils/status_messages.dart';
 
 class RegistrationScreen extends StatefulWidget {
   const RegistrationScreen({super.key});
@@ -59,72 +61,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     _identificationNumberController.dispose();
     _emailController.dispose();
     super.dispose();
-  }
-  // validation
-  String? _validateFullName(String? value) {
-    if (value == null || value.isEmpty) {
-      return 'Full name is required';
-    }
-    if (value.trim().length < 2) {
-      return 'Full name must be at least 2 characters';
-    }
-    return null;
-  }
-
-  String? _validateMemberNumber(String? value) {
-    if (value == null || value.isEmpty) {
-      return 'Member number is required';
-    }
-    if (value.trim().length < 3) {
-      return 'Member number must be at least 3 characters';
-    }
-    return null;
-  }
-
-  String? _validateMobileNumber(String? value) {
-    if (value == null || value.isEmpty) {
-      return 'Mobile number is required';
-    }
-    String cleanNumber = value.replaceAll(RegExp(r'[^0-9]'), '');
-    if (cleanNumber.length < 10 || cleanNumber.length > 15) {
-      return 'Enter a valid mobile number (10-15 digits)';
-    }
-    return null;
-  }
-
-  String? _validateIdType(String? value) {
-    if (value == null || value.isEmpty) {
-      return 'Please select an identification type';
-    }
-    return null;
-  }
-  String? _validateGender(String? value) {
-    if (value == null || value.isEmpty) {
-      return 'Please select Gender';
-    }
-    return null;
-  }
-
-
-  String? _validateIdNumber(String? value) {
-    if (value == null || value.isEmpty) {
-      return 'Identification number is required';
-    }
-    if (value.trim().length < 5) {
-      return 'Identification number must be at least 5 characters';
-    }
-    return null;
-  }
-
-  String? _validateEmail(String? value) {
-    if (value == null || value.isEmpty) {
-      return 'Email address is required';
-    }
-    final emailRegex = RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
-    if (!emailRegex.hasMatch(value)) {
-      return 'Enter a valid email address';
-    }
-    return null;
   }
   // Photo capture methods(enables selecting picture from gallery)-higher quality imgs
   Future<void> _captureSelfie() async {
@@ -188,12 +124,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
           _selfieImageBytes = null;
         });
         
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Photo captured successfully!'),
-            backgroundColor: Colors.green,
-          ),
-        );
+        StatusMessages.success(context, message: 'Photo captured successfully!');
       }
     } catch (e) {
       CustomDialogs.showErrorDialog(
@@ -222,12 +153,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
           _selfieImageBytes = null;
         }
         setState(() {});
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Photo selected successfully!'),
-            backgroundColor: Colors.green,
-          ),
-        );
+        StatusMessages.success(context, message: 'Photo selected successfully!');
       }
     } catch (e) {
       CustomDialogs.showErrorDialog(
@@ -479,7 +405,7 @@ Future<void> _pickSignature() async {
 
           TextFormField(
             controller: _fullNameController,
-            validator: _validateFullName,
+            validator: Validators.fullName(),
             decoration: const InputDecoration(
               labelText: 'Full Name',
               border: OutlineInputBorder(),
@@ -489,7 +415,7 @@ Future<void> _pickSignature() async {
           const SizedBox(height: 16),
           DropdownButtonFormField<String>(
             value: _selectedGender,
-            validator: _validateGender,
+            validator: Validators.requiredDropdown('Gender'),
             decoration: const InputDecoration(
               labelText: 'Gender',
               border: OutlineInputBorder(),
@@ -511,7 +437,7 @@ Future<void> _pickSignature() async {
 
           TextFormField(
             controller: _memberNumberController,
-            validator: _validateMemberNumber,
+            validator: Validators.memberNumber(),
             decoration: const InputDecoration(
               labelText: 'Member Number',
               border: OutlineInputBorder(),
@@ -522,7 +448,7 @@ Future<void> _pickSignature() async {
 
           TextFormField(
             controller: _mobileController,
-            validator: _validateMobileNumber,
+            validator: Validators.mobileNumberBasic(),
             keyboardType: TextInputType.phone,
             inputFormatters: [
               FilteringTextInputFormatter.digitsOnly,
@@ -538,7 +464,7 @@ Future<void> _pickSignature() async {
 
           DropdownButtonFormField<String>(
             value: _selectedIdType,
-            validator: _validateIdType,
+            validator: Validators.requiredDropdown('Identification type'),
             decoration: const InputDecoration(
               labelText: 'Identification Type',
               border: OutlineInputBorder(),
@@ -560,7 +486,7 @@ Future<void> _pickSignature() async {
 
           TextFormField(
             controller: _identificationNumberController,
-            validator: _validateIdNumber,
+            validator: Validators.idNumber(),
             decoration: const InputDecoration(
               labelText: 'Identification Number',
               border: OutlineInputBorder(),
@@ -570,7 +496,7 @@ Future<void> _pickSignature() async {
           const SizedBox(height: 16),
           TextFormField(
             controller: _emailController,
-            validator: _validateEmail,
+            validator: (v) => Validators.email(v, label: 'Email address'),
             keyboardType: TextInputType.emailAddress,
             decoration: const InputDecoration(
               labelText: 'Email Address',
@@ -630,7 +556,7 @@ Future<void> _pickSignature() async {
           const SizedBox(height: 24),
           TextFormField(
             controller: _fullNameController,
-            validator: _validateFullName,
+            validator: Validators.fullName(),
             decoration: const InputDecoration(
               labelText: 'Full Name',
               border: OutlineInputBorder(),
@@ -641,7 +567,7 @@ Future<void> _pickSignature() async {
 
           TextFormField(
             controller: _memberNumberController,
-            validator: _validateMemberNumber,
+            validator: Validators.memberNumber(),
             decoration: const InputDecoration(
               labelText: 'Member Number',
               border: OutlineInputBorder(),
@@ -652,7 +578,7 @@ Future<void> _pickSignature() async {
 
           TextFormField(
             controller: _mobileController,
-            validator: _validateMobileNumber,
+            validator: Validators.mobileNumberBasic(),
             keyboardType: TextInputType.phone,
             inputFormatters: [
               FilteringTextInputFormatter.digitsOnly,
@@ -668,7 +594,7 @@ Future<void> _pickSignature() async {
 
           DropdownButtonFormField<String>(
             value: _selectedIdType,
-            validator: _validateIdType,
+            validator: Validators.requiredDropdown('Identification type'),
             decoration: const InputDecoration(
               labelText: 'Identification Type',
               border: OutlineInputBorder(),
@@ -690,7 +616,7 @@ Future<void> _pickSignature() async {
 
           TextFormField(
             controller: _identificationNumberController,
-            validator: _validateIdNumber,
+            validator: Validators.idNumber(),
             decoration: const InputDecoration(
               labelText: 'Identification Number',
               border: OutlineInputBorder(),
@@ -701,7 +627,7 @@ Future<void> _pickSignature() async {
 
           TextFormField(
             controller: _emailController,
-            validator: _validateEmail,
+            validator: (v) => Validators.email(v, label: 'Email address'),
             keyboardType: TextInputType.emailAddress,
             decoration: const InputDecoration(
               labelText: 'Email Address',

@@ -13,6 +13,7 @@ import 'withdraw_dialog.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'menu_drawer_screen.dart';
+import '../Utils/status_messages.dart';
 
 class DashboardScreen extends StatefulWidget {
   final String username;
@@ -504,22 +505,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
           onDepositSuccess: (double amount, String phoneNumber) async {
             await _refreshDashboard();
             if (mounted && context.mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Row(
-                    children: [
-                      const Icon(Icons.check_circle, color: Colors.white),
-                      const SizedBox(width: 8),
-                      Text('Successfully sent $_currentCurrencyCode ${amount.toStringAsFixed(2)} to SACCO'),
-                    ],
-                  ),
-                  backgroundColor: Colors.green,
-                  behavior: SnackBarBehavior.floating,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  duration: const Duration(seconds: 3),
-                ),
+              StatusMessages.success(
+                context,
+                message: 'Successfully sent $_currentCurrencyCode ${amount.toStringAsFixed(2)} to SACCO',
               );
             }
           },
@@ -558,22 +546,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
           onWithdrawSuccess: (double amount, String phoneNumber) async {
             await _refreshDashboard();
             if (mounted && context.mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Row(
-                    children: [
-                      const Icon(Icons.check_circle, color: Colors.white),
-                      const SizedBox(width: 8),
-                      Text('Successfully sent $_currentCurrencyCode ${amount.toStringAsFixed(2)} to MTN'),
-                    ],
-                  ),
-                  backgroundColor: Colors.orange,
-                  behavior: SnackBarBehavior.floating,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  duration: const Duration(seconds: 3),
-                ),
+              StatusMessages.info(
+                context,
+                message: 'Successfully sent $_currentCurrencyCode ${amount.toStringAsFixed(2)} to MTN',
               );
             }
           },
@@ -583,13 +558,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   void _handlePayBills() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Pay Bills feature coming soon!'),
-        backgroundColor: Colors.blue,
-        duration: Duration(seconds: 2),
-      ),
-    );
+    StatusMessages.info(context, message: 'Pay Bills feature coming soon!', duration: const Duration(seconds: 2));
   }
 
   void _viewFullStatement() {

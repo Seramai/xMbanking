@@ -4,6 +4,9 @@ import '../Services/api_service.dart';
 import 'package:intl/intl.dart';
 import '../Widgets/custom_dialogs.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../Utils/status_messages.dart';
+import '../Utils/validators.dart';
+import '../Utils/phone_utils.dart';
 
 class WithdrawDialog extends StatefulWidget {
   final Function(double amount, String phoneNumber) onWithdrawSuccess;
@@ -47,12 +50,7 @@ class _WithdrawDialogState extends State<WithdrawDialog> {
     }
   }
 
-  bool _isValidPhoneFormat(String phone) {
-    String cleanedPhone = phone.replaceAll(RegExp(r'[^\d]'), '');
-    return (cleanedPhone.startsWith('254') && cleanedPhone.length == 12) ||
-          (cleanedPhone.startsWith('0') && cleanedPhone.length == 10) ||
-          (cleanedPhone.startsWith('7') && cleanedPhone.length == 9);
-  }
+  bool _isValidPhoneFormat(String phone) => PhoneUtils.isValidPhoneFormat(phone);
 
   @override
   void dispose() {
@@ -79,53 +77,9 @@ class _WithdrawDialogState extends State<WithdrawDialog> {
     }
   }
 
-  String? _validateAmount(String? value) {
-    if (value == null || value.isEmpty) {
-      return 'Please enter an amount';
-    }
-    final amount = double.tryParse(value);
-    if (amount == null || amount <= 0) {
-      return 'Please enter a valid amount';
-    }
-    if (amount < 10) {
-      return 'Minimum amount is $_currentCurrencyCode 10';
-    }
-    if (amount > 7000000) {
-      return 'Maximum amount is $_currentCurrencyCode 7000,000';
-    }
-    if (amount > widget.currentBalance) {
-      return 'Insufficient balance';
-    }
-    return null;
-  }
+  
 
-  String? _validatePhone(String? value) {
-    if (value == null || value.isEmpty) {
-      return 'Please enter phone number';
-    }
-    String cleanedPhone = value.replaceAll(RegExp(r'[^\d]'), '');
-    if (cleanedPhone.startsWith('254') && cleanedPhone.length == 12) {
-      return null;
-    } else if (cleanedPhone.startsWith('0') && cleanedPhone.length == 10) {
-      return null;
-    } else if (cleanedPhone.startsWith('7') && cleanedPhone.length == 9) {
-      return null;
-    }
-    return 'Please enter a valid phone number';
-  }
-
-  String _formatPhoneNumber(String phone) {
-    String cleanedPhone = phone.replaceAll(RegExp(r'[^\d]'), '');
-    
-    if (cleanedPhone.startsWith('0')) {
-      return '254${cleanedPhone.substring(1)}';
-    } else if (cleanedPhone.startsWith('7')) {
-      return '254$cleanedPhone';
-    } else if (cleanedPhone.startsWith('254')) {
-      return cleanedPhone;
-    }
-    return cleanedPhone;
-  }
+  String _formatPhoneNumber(String phone) => PhoneUtils.formatToLocal(phone);
 
   void _processWithdraw() async {
     if (_formKey.currentState!.validate()) {
@@ -195,24 +149,14 @@ class _WithdrawDialogState extends State<WithdrawDialog> {
       } catch (e) {
         if (e.toString().contains('401') || e.toString().contains('Unauthorized') || 
             e.toString().contains('Invalid/Expired token')) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Session expired. Please login again.'),
-              backgroundColor: Colors.red,
-            ),
-          );
+          StatusMessages.error(context, message: 'Session expired. Please login again.');
           final prefs = await SharedPreferences.getInstance();
           await prefs.remove('authToken');
           await prefs.setBool('isLoggedIn', false);
           
           Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Send to MTN failed: $e'),
-              backgroundColor: Colors.red,
-            ),
-          );
+          StatusMessages.error(context, message: 'Send to MTN failed: $e');
         }
         setState(() {
           _isProcessing = false;
@@ -376,7 +320,7 @@ class _WithdrawDialogState extends State<WithdrawDialog> {
                             vertical: 16,
                           ),
                         ),
-                        validator: _validateAmount,
+                        validator: Validators.amount(currencyCode: _currentCurrencyCode, min: 10, max: 7000000, availableBalance: widget.currentBalance),
                         enabled: !_isProcessing,
                       ),
                       const SizedBox(height: 20),
@@ -450,7 +394,7 @@ class _WithdrawDialogState extends State<WithdrawDialog> {
                               ? FontWeight.w500 
                               : FontWeight.normal,
                         ),
-                        validator: _validatePhone,
+                        validator: Validators.phoneLocal(label: 'Phone number'),
                         enabled: (widget.lockedPhoneNumber == null || 
                                   widget.lockedPhoneNumber!.isEmpty || 
                                   !_isValidPhoneFormat(widget.lockedPhoneNumber!)) && !_isProcessing,

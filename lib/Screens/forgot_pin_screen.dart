@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../Widgets/custom_dialogs.dart';
+import '../Utils/validators.dart';
+import '../Utils/status_messages.dart';
 
 class ForgotPinScreen extends StatefulWidget {
   const ForgotPinScreen({super.key});
@@ -31,49 +33,6 @@ class _ForgotPinScreenState extends State<ForgotPinScreen> {
     super.dispose();
   }
 
-  String? _validateUsername(String? value) {
-    if (value == null || value.isEmpty) {
-      return 'Username is required';
-    }
-    if (value.length < 3) {
-      return 'Username must be at least 3 characters';
-    }
-    return null;
-  }
-
-  String? _validateEmail(String? value) {
-    if (value == null || value.isEmpty) {
-      return 'Email is required';
-    }
-    if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
-      return 'Please enter a valid email address';
-    }
-    return null;
-  }
-
-  String? _validateNewPin(String? value) {
-    if (value == null || value.isEmpty) {
-      return 'New PIN is required';
-    }
-    if (value.length < 4 || value.length > 6) {
-      return 'PIN must be between 4-6 digits';
-    }
-    if (!RegExp(r'^[0-9]+$').hasMatch(value)) {
-      return 'PIN must contain only numbers';
-    }
-    return null;
-  }
-
-  String? _validateConfirmPin(String? value) {
-    if (value == null || value.isEmpty) {
-      return 'Please confirm your PIN';
-    }
-    if (value != _newPinController.text) {
-      return 'PINs do not match';
-    }
-    return null;
-  }
-
   Future<void> _verifyUser() async {
     if (!_formKey.currentState!.validate()) {
       return;
@@ -90,12 +49,7 @@ class _ForgotPinScreenState extends State<ForgotPinScreen> {
         _currentStep = 1;
       });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('User verified! Please set your new PIN.'),
-          backgroundColor: Colors.green,
-        ),
-      );
+      StatusMessages.success(context, message: 'User verified! Please set your new PIN.');
     } catch (e) {
       CustomDialogs.showErrorDialog(
         context: context,
@@ -122,12 +76,7 @@ class _ForgotPinScreenState extends State<ForgotPinScreen> {
       // Simulate API call for PIN update
       await Future.delayed(const Duration(seconds: 2));
       
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('PIN updated successfully!'),
-          backgroundColor: Colors.green,
-        ),
-      );
+      StatusMessages.success(context, message: 'PIN updated successfully!');
       Navigator.pushReplacementNamed(context, '/login');
     } catch (e) {
       CustomDialogs.showErrorDialog(
@@ -164,7 +113,7 @@ class _ForgotPinScreenState extends State<ForgotPinScreen> {
         const SizedBox(height: 24),
         TextFormField(
           controller: _usernameController,
-          validator: _validateUsername,
+          validator: Validators.requiredMinLength('Username', 3),
           decoration: const InputDecoration(
             labelText: 'Username',
             border: OutlineInputBorder(),
@@ -174,7 +123,7 @@ class _ForgotPinScreenState extends State<ForgotPinScreen> {
         const SizedBox(height: 16),
         TextFormField(
           controller: _emailController,
-          validator: _validateEmail,
+          validator: (v) => Validators.email(v),
           keyboardType: TextInputType.emailAddress,
           decoration: const InputDecoration(
             labelText: 'Email Address',
@@ -236,7 +185,7 @@ class _ForgotPinScreenState extends State<ForgotPinScreen> {
         const SizedBox(height: 24),
         TextFormField(
           controller: _newPinController,
-          validator: _validateNewPin,
+          validator: Validators.pin(minLength: 4, maxLength: 6),
           obscureText: !_isNewPinVisible,
           keyboardType: TextInputType.number,
           inputFormatters: [
@@ -264,7 +213,7 @@ class _ForgotPinScreenState extends State<ForgotPinScreen> {
         const SizedBox(height: 16),
         TextFormField(
           controller: _confirmPinController,
-          validator: _validateConfirmPin,
+          validator: Validators.confirmMatch(label: 'Confirm PIN', otherValue: () => _newPinController.text, mismatchMessage: 'PINs do not match'),
           obscureText: !_isConfirmPinVisible,
           keyboardType: TextInputType.number,
           inputFormatters: [

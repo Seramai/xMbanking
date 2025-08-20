@@ -6,6 +6,7 @@ import 'dart:io';
 import 'dart:typed_data';
 import '../Widgets/custom_dialogs.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../Utils/validators.dart';
 
 class LoginScreen extends StatefulWidget {
   final Uint8List? profileImageBytes;
@@ -41,29 +42,6 @@ class _LoginScreenState extends State<LoginScreen> {
     _mobileNumberController.dispose();
     _passwordController.dispose();
     super.dispose();
-  }
-
-  String? _validateMobileNumber(String? value) {
-    if (value == null || value.isEmpty) {
-      return 'Mobile number is required';
-    }
-    if (value.length < 10) {
-      return 'Mobile number must be at least 10 digits';
-    }
-    if (!RegExp(r'^[0-9+]+$').hasMatch(value)) {
-      return 'Please enter a valid mobile number';
-    }
-    return null;
-  }
-
-  String? _validatePassword(String? value) {
-    if (value == null || value.isEmpty) {
-      return 'Password is required';
-    }
-    if (value.length < 4) {
-      return 'Password must be at least 4 characters';
-    }
-    return null;
   }
 
   Future<void> _performLogin() async {
@@ -264,7 +242,7 @@ Widget build(BuildContext context) {
                             children: [
                               TextFormField(
                                 controller: _mobileNumberController,
-                                validator: _validateMobileNumber,
+                                validator: Validators.mobileNumberBasic(label: 'Mobile number', minDigits: 10, maxDigits: 15),
                                 keyboardType: TextInputType.phone,
                                 decoration: InputDecoration(
                                   labelText: 'Mobile Number',
@@ -282,7 +260,7 @@ Widget build(BuildContext context) {
                               const SizedBox(height: 16),
                               TextFormField(
                                   controller: _passwordController,
-                                  validator: _validatePassword,
+                                  validator: Validators.requiredMinLength('Password', 4),
                                   obscureText: !_isPinVisible,
                                   decoration: InputDecoration(
                                     labelText: 'Password',

@@ -6,6 +6,8 @@ import 'package:permission_handler/permission_handler.dart';
 import 'dart:typed_data';
 import 'dart:io';
 import 'dart:convert';
+import '../Utils/validators.dart';
+import '../Utils/status_messages.dart';
 
 class EditProfileScreen extends StatefulWidget {
   final String initialUsername;
@@ -44,27 +46,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     _nameController.dispose();
     _emailController.dispose();
     super.dispose();
-  }
-
-  String? _validateName(String? value) {
-    if (value == null || value.trim().isEmpty) {
-      return 'Full name is required';
-    }
-    if (value.trim().length < 2) {
-      return 'Please enter a valid name';
-    }
-    return null;
-  }
-
-  String? _validateEmail(String? value) {
-    if (value == null || value.trim().isEmpty) {
-      return 'Email is required';
-    }
-    final emailRegex = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
-    if (!emailRegex.hasMatch(value.trim())) {
-      return 'Please enter a valid email address';
-    }
-    return null;
   }
 
   Future<void> _loadExistingImage() async {
@@ -108,12 +89,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     final granted = await _ensureCameraPermission();
     if (!granted) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Camera permission is required to take a selfie'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      StatusMessages.error(context, message: 'Camera permission is required to take a selfie');
       return;
     }
     try {
@@ -127,12 +103,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       });
     } catch (_) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Failed to capture image. Please try again.'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      StatusMessages.error(context, message: 'Failed to capture image. Please try again.');
     }
   }
 
@@ -173,12 +144,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       }
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Failed to save profile changes. Please try again.'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        StatusMessages.error(context, message: 'Failed to save profile changes. Please try again.');
       }
     } finally {
       if (mounted) setState(() => _isSaving = false);
@@ -271,7 +237,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                             border: OutlineInputBorder(),
                             prefixIcon: Icon(Icons.person_outline),
                           ),
-                          validator: _validateName,
+                          validator: Validators.fullName(),
                         ),
                         const SizedBox(height: 16),
                         TextFormField(
@@ -282,7 +248,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                             prefixIcon: Icon(Icons.email_outlined),
                           ),
                           keyboardType: TextInputType.emailAddress,
-                          validator: _validateEmail,
+                          validator: (v) => Validators.email(v),
                         ),
                       ],
                     ),

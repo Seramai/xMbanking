@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 import '../Services/api_service.dart';
 import '../Widgets/custom_dialogs.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../Utils/validators.dart';
+import '../Utils/phone_utils.dart';
 
 class DepositDialog extends StatefulWidget {
   final Function(double amount, String phoneNumber) onDepositSuccess;
@@ -43,12 +45,7 @@ class _DepositDialogState extends State<DepositDialog> {
     }
   }
 
-  bool _isValidPhoneFormat(String phone) {
-    String cleanedPhone = phone.replaceAll(RegExp(r'[^\d]'), '');
-    return (cleanedPhone.startsWith('254') && cleanedPhone.length == 12) ||
-          (cleanedPhone.startsWith('0') && cleanedPhone.length == 10) ||
-          (cleanedPhone.startsWith('7') && cleanedPhone.length == 9);
-  }
+  bool _isValidPhoneFormat(String phone) => PhoneUtils.isValidPhoneFormat(phone);
 
   @override
   void dispose() {
@@ -58,50 +55,9 @@ class _DepositDialogState extends State<DepositDialog> {
     super.dispose();
   }
 
-  String? _validateAmount(String? value) {
-    if (value == null || value.isEmpty) {
-      return 'Please enter an amount';
-    }
-    final amount = double.tryParse(value);
-    if (amount == null || amount <= 0) {
-      return 'Please enter a valid amount';
-    }
-    if (amount < 10) {
-      return 'Minimum amount is $_currentCurrencyCode 10';
-    }
-    if (amount > 15000000) {
-      return 'Maximum  amount is $_currentCurrencyCode 15,000,000';
-    }
-    return null;
-  }
+  
 
-  String? _validatePhone(String? value) {
-    if (value == null || value.isEmpty) {
-      return 'Please enter phone number';
-    }
-    String cleanedPhone = value.replaceAll(RegExp(r'[^\d]'), '');
-    if (cleanedPhone.startsWith('254') && cleanedPhone.length == 12) {
-      return null;
-    } else if (cleanedPhone.startsWith('0') && cleanedPhone.length == 10) {
-      return null;
-    } else if (cleanedPhone.startsWith('7') && cleanedPhone.length == 9) {
-      return null;
-    }
-    return 'Please enter a valid phone number';
-  }
-
-  String _formatPhoneNumber(String phone) {
-    String cleanedPhone = phone.replaceAll(RegExp(r'[^\d]'), '');
-    
-    if (cleanedPhone.startsWith('0')) {
-      return '254${cleanedPhone.substring(1)}';
-    } else if (cleanedPhone.startsWith('7')) {
-      return '254$cleanedPhone';
-    } else if (cleanedPhone.startsWith('254')) {
-      return cleanedPhone;
-    }
-    return cleanedPhone;
-  }
+  String _formatPhoneNumber(String phone) => PhoneUtils.formatToLocal(phone);
 
   void _processDeposit() async {
     if (_formKey.currentState!.validate()) {
@@ -298,7 +254,7 @@ class _DepositDialogState extends State<DepositDialog> {
                       vertical: 16,
                     ),
                   ),
-                  validator: _validateAmount,
+                  validator: Validators.amount(currencyCode: _currentCurrencyCode, min: 10, max: 15000000),
                   enabled: !_isProcessing,
                 ),
                 const SizedBox(height: 20),
@@ -320,7 +276,7 @@ class _DepositDialogState extends State<DepositDialog> {
                   ],
                   decoration: InputDecoration(
                     hintText: widget.lockedPhoneNumber == null 
-                        ? '0712345678 or 254712345678'
+                        ? '0712345678'
                         : null,
                     prefixIcon: Icon(
                       Icons.phone_android,
@@ -372,7 +328,7 @@ class _DepositDialogState extends State<DepositDialog> {
                         ? FontWeight.w500 
                         : FontWeight.normal,
                   ),
-                  validator: _validatePhone,
+                  validator: Validators.phoneLocal(label: 'Phone number'),
                   enabled: (widget.lockedPhoneNumber == null || 
                             widget.lockedPhoneNumber!.isEmpty || 
                             !_isValidPhoneFormat(widget.lockedPhoneNumber!)) && !_isProcessing,

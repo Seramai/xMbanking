@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
+import '../Utils/status_messages.dart';
 
 class UserProfileScreen extends StatefulWidget {
   final String username;
@@ -341,12 +342,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                                 } catch (_) {}
                               }
                               if (tokenToUse.isEmpty) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('Authentication error. Please login again to change PIN.'),
-                                    backgroundColor: Colors.red,
-                                  ),
-                                );
+                                StatusMessages.error(context, message: 'Authentication error. Please login again to change PIN.');
                                 return;
                               }
                               Navigator.pushNamed(
