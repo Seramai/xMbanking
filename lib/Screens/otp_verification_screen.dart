@@ -10,6 +10,7 @@ import 'dart:typed_data';
 import 'package:sms_autofill/sms_autofill.dart';
 import 'package:otp_autofill/otp_autofill.dart';
 import '../Services/token_manager.dart';
+import '../Services/device_fingerprint_service.dart';
 
 class OTPVerificationScreen extends StatefulWidget {
   final String email;
@@ -209,11 +210,34 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> with Code
         // Storing data locally
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('loginData', jsonEncode(completeLoginData));
+        await prefs.setString('dashboardData', jsonEncode(completeLoginData));
+        await prefs.setString('authToken', authToken ?? '');
+        await prefs.setString('userToken', authToken ?? '');
         await TokenManager.setToken(authToken ?? '');
         await prefs.setString('userId', widget.userId);
         await prefs.setString('userEmail', widget.email);
         await prefs.setString('userMobile', widget.mobileNumber);
+        await prefs.setString('userName', result['data']?['Name'] ?? '');
         await prefs.setBool('isLoggedIn', true);
+        if (result['data']?['CurrencyCode'] != null) {
+          await prefs.setString('userCurrencyCode', result['data']['CurrencyCode']);
+        } else {
+        }
+        if (authToken != null && authToken.isNotEmpty) {
+          try {
+            final trustResult = await DeviceFingerprintService.trustDevice(
+              authToken: authToken,
+            );
+            
+            if (trustResult['success']) {
+              print('[OTP_VERIFICATION] Device trusted successfully');
+            } else {
+              print('[OTP_VERIFICATION] Failed to trust device: ${trustResult['message']}');
+            }
+          } catch (e) {
+            print('[OTP_VERIFICATION] Error trusting device: $e');
+          }
+        }
 
         CustomDialogs.showSuccessDialog(
           context: context, 

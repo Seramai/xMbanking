@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:local_auth/local_auth.dart';
 import '../Services/api_service.dart';
+import '../Services/token_manager.dart';
 import 'dart:io';
 import 'dart:typed_data';
+import 'dart:convert';
 import '../Widgets/custom_dialogs.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../Utils/validators.dart';
@@ -72,7 +74,14 @@ class _LoginScreenState extends State<LoginScreen> {
             await prefs.remove('savedPin');
           }
         } catch (_) {}
-        _navigateToOtpScreen(result['data']);
+        final loginData = result['data'];
+        final requiresMfa = loginData?['RequiresMfa'] ?? false;
+        
+        if (requiresMfa) {
+          _navigateToOtpScreen(loginData);
+        } else {
+          _navigateToDashboard(loginData);
+        }
       } else {
         CustomDialogs.showErrorDialog(
           context: context,
@@ -138,6 +147,53 @@ class _LoginScreenState extends State<LoginScreen> {
         'fromRegistration': args?['fromRegistration'] ?? false,
       },
     );
+  }
+
+  void _navigateToDashboard(Map<String, dynamic>? loginData) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('userToken', loginData?['Token'] ?? '');
+      await prefs.setString('authToken', loginData?['Token'] ?? '');
+      await prefs.setString('userMobile', _mobileNumberController.text.trim());
+      await prefs.setString('userName', loginData?['Name'] ?? '');
+      await prefs.setString('userPhoneNumber', loginData?['PhoneNumber'] ?? _mobileNumberController.text.trim());
+      await prefs.setString('userEmail', loginData?['Email'] ?? loginData?['EmailAddress'] ?? '');
+      await prefs.setBool('isLoggedIn', true);
+      try {
+        await TokenManager.setToken(loginData?['Token'] ?? '');
+      } catch (e) {
+
+      }
+      if (loginData?['balance'] != null) {
+        await prefs.setString('userBalance', loginData?['balance']['Balance']?.toString() ?? '0');
+        await prefs.setString('userProduct', loginData?['balance']['Product'] ?? '');
+      }
+      if (loginData?['CurrencyCode'] != null) {
+        await prefs.setString('userCurrencyCode', loginData?['CurrencyCode']);
+      } else {
+      }
+      final dashboardData = {
+        'data': loginData,
+        'needsRefresh': false,
+      };
+      await prefs.setString('dashboardData', jsonEncode(dashboardData));
+      await prefs.setString('loginData', jsonEncode(dashboardData));
+      try {
+        await prefs.setBool('deviceTrusted', true);
+      } catch (e) {
+      }
+      Navigator.pushNamedAndRemoveUntil(
+        context,
+        '/dashboard',
+        (route) => false,
+      );
+    } catch (e) {
+      CustomDialogs.showErrorDialog(
+        context: context,
+        title: 'Navigation Error',
+        message: 'Failed to navigate to dashboard. Please try again.',
+      );
+    }
   }
 
   void _handleForgotPin() {

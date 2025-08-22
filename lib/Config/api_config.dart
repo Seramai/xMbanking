@@ -109,6 +109,15 @@ class ApiConfig{
       return baseUrl + configured;
   }
 
+  // retrieving the trust device url
+  static String get trustDeviceUrl{
+    final endpoint = dotenv.env['TRUST_DEVICE'];
+    if(endpoint == null || endpoint.isEmpty){
+      throw Exception("TRUST_DEVICE not found in the env file");
+    }
+    return baseUrl + endpoint;
+  }
+
   // this is the deposit/withdraw header only
   static Map<String, String> getTransactionHeaders(String token){
     return{

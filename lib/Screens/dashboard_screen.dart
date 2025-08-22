@@ -247,13 +247,46 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Future<void> _loadStoredData() async {
     try {
       final prefs = await SharedPreferences.getInstance();
+      String? storedDashboardData = prefs.getString('dashboardData');
+      if (storedDashboardData != null) {
+        setState(() {
+          _loginData = jsonDecode(storedDashboardData);
+          _loadApiData();
+        });
+        _userMobileNumber = prefs.getString('userMobile') ?? 
+                           prefs.getString('userPhoneNumber') ?? 
+                           widget.username;
+        final storedCurrencyCode = prefs.getString('userCurrencyCode');
+        if (storedCurrencyCode != null && storedCurrencyCode.isNotEmpty) {
+          setState(() {
+            _currentCurrencyCode = storedCurrencyCode;
+            _currentCurrencySymbol = storedCurrencyCode;
+          });
+          print('[DASHBOARD] Loaded currency code from stored data: $storedCurrencyCode');
+        } else {
+          print('[DASHBOARD] No currency code found in stored data');
+        }
+        return;
+      }
       final storedLoginData = prefs.getString('loginData');
-      
       if (storedLoginData != null) {
         setState(() {
           _loginData = jsonDecode(storedLoginData);
           _loadApiData();
         });
+      }
+      _userMobileNumber = prefs.getString('userMobile') ?? 
+                         prefs.getString('userPhoneNumber') ?? 
+                         widget.username;
+      final storedCurrencyCode = prefs.getString('userCurrencyCode');
+      if (storedCurrencyCode != null && storedCurrencyCode.isNotEmpty) {
+        setState(() {
+          _currentCurrencyCode = storedCurrencyCode;
+          _currentCurrencySymbol = storedCurrencyCode;
+        });
+        print('[DASHBOARD] Loaded currency code from SharedPreferences: $storedCurrencyCode');
+      } else {
+        print('[DASHBOARD] No currency code found in SharedPreferences');
       }
     } catch (e) {}
   }
@@ -290,6 +323,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
       }
       
       if (response['success']) {
+        // Get currency code before setState to avoid await in setState
+        String? storedCurrencyCode;
+        if (_currentCurrencyCode.isEmpty) {
+          try {
+            final prefs = await SharedPreferences.getInstance();
+            storedCurrencyCode = prefs.getString('userCurrencyCode');
+          } catch (e) {
+            print('[DASHBOARD] Error getting currency code: $e');
+          }
+        }
+        
         setState(() {
           if (_loginData!['data'] != null) {
             _loginData!['data'] = response['data'];
@@ -297,6 +341,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
             _loginData = response['data'];
           }
           _loadApiData();
+          
+          // Ensure currency code is preserved if not in response
+          if (_currentCurrencyCode.isEmpty && storedCurrencyCode != null && storedCurrencyCode.isNotEmpty) {
+            _currentCurrencyCode = storedCurrencyCode;
+            _currentCurrencySymbol = storedCurrencyCode;
+            print('[DASHBOARD] Restored currency code from SharedPreferences: $storedCurrencyCode');
+          }
         });
       } else {
         if (response['message'].toString().toLowerCase().contains('unauthorized') || 

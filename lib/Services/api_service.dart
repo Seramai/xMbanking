@@ -6,12 +6,9 @@ import 'package:http/http.dart' as http;
 // Handles files
 import 'package:http_parser/http_parser.dart';
 import '../Config/api_config.dart';
-import 'package:device_info_plus/device_info_plus.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
-import 'package:package_info_plus/package_info_plus.dart';
-import 'dart:ui' as ui;
-import 'package:flutter/material.dart';
-import 'package:flutter/services.dart'; 
+import 'package:flutter/services.dart';
+import 'device_fingerprint_service.dart'; 
 
 class ApiService {
   // Validating registration details
@@ -251,15 +248,14 @@ class ApiService {
     required String password,
   }) async {
     try {
+      
       // getting the device details
-      final deviceDetails = await _getDeviceDetails();
+      final deviceDetails = await DeviceFingerprintService.getDeviceDetails();
       final requestBody = {
         "MobileNumber": mobileNumber,
         "Password": password,
         "DeviceDetails": deviceDetails,
       };
-      
-      
       
       final response = await http.post(
         Uri.parse(ApiConfig.loginUrl),
@@ -819,91 +815,6 @@ class ApiService {
         return 'BIRTH_CERTIFICATE';
       default:
         return 'NIN';
-    }
-  }
-  // helper method that gathers device information
-  static Future<Map<String, dynamic>> _getDeviceDetails() async {
-    try {
-      final DeviceInfoPlugin deviceInfo = DeviceInfoPlugin();
-      final PackageInfo packageInfo = await PackageInfo.fromPlatform();
-      final ConnectivityResult connectivityResult = await Connectivity().checkConnectivity();
-      final ui.FlutterView view = ui.PlatformDispatcher.instance.views.first;
-      final Size screenSize = view.physicalSize;
-      final double pixelRatio = view.devicePixelRatio;
-      final Locale locale = ui.PlatformDispatcher.instance.locale;
-      
-      Map<String, dynamic> deviceDetails = {};
-      
-      if (Platform.isAndroid) {
-        final AndroidDeviceInfo androidInfo = await deviceInfo.androidInfo;
-        deviceDetails = {
-          "DeviceId": androidInfo.id, 
-          "Model": androidInfo.model,
-          "Brand": androidInfo.brand,
-          "OsVersion": androidInfo.version.release,
-          "SdkVersion": androidInfo.version.sdkInt.toString(),
-          "AppVersion": packageInfo.version,
-          "BuildNumber": packageInfo.buildNumber,
-          "ScreenResolution": "${screenSize.width.toInt()}x${screenSize.height.toInt()}",
-          "PixelDensity": pixelRatio,
-          "NetworkType": connectivityResult.toString(),
-          "Language": locale.languageCode,
-          "Country": locale.countryCode ?? "Unknown",
-          "TimeZone": DateTime.now().timeZoneName,
-        };
-      } else if (Platform.isIOS) {
-        final IosDeviceInfo iosInfo = await deviceInfo.iosInfo;
-        deviceDetails = {
-          "DeviceId": iosInfo.identifierForVendor ?? "Unknown", 
-          "Model": iosInfo.model,
-          "Brand": "Apple",
-          "OsVersion": iosInfo.systemVersion,
-          "SdkVersion": iosInfo.systemVersion,
-          "AppVersion": packageInfo.version,
-          "BuildNumber": packageInfo.buildNumber,
-          "ScreenResolution": "${screenSize.width.toInt()}x${screenSize.height.toInt()}",
-          "PixelDensity": pixelRatio,
-          "NetworkType": connectivityResult.toString(),
-          "Language": locale.languageCode,
-          "Country": locale.countryCode ?? "Unknown",
-          "TimeZone": DateTime.now().timeZoneName,
-        };
-      } else {
-        deviceDetails = {
-          "DeviceId": "web_device_${DateTime.now().millisecondsSinceEpoch}",
-          "Model": "Unknown",
-          "Brand": "Unknown",
-          "OsVersion": "Unknown",
-          "SdkVersion": "Unknown",
-          "AppVersion": packageInfo.version,
-          "BuildNumber": packageInfo.buildNumber,
-          "ScreenResolution": "${screenSize.width.toInt()}x${screenSize.height.toInt()}",
-          "PixelDensity": pixelRatio,
-          "NetworkType": connectivityResult.toString(),
-          "Language": locale.languageCode,
-          "Country": locale.countryCode ?? "Unknown",
-          "TimeZone": DateTime.now().timeZoneName,
-        };
-      }
-      
-      return deviceDetails;
-    } catch (e) {
-      
-      return {
-        "DeviceId": "unknown_device_${DateTime.now().millisecondsSinceEpoch}",
-        "Model": "Unknown",
-        "Brand": "Unknown",
-        "OsVersion": "Unknown",
-        "SdkVersion": "Unknown",
-        "AppVersion": "1.0.0",
-        "BuildNumber": "1",
-        "ScreenResolution": "Unknown",
-        "PixelDensity": 1.0,
-        "NetworkType": "Unknown",
-        "Language": "en",
-        "Country": "Unknown",
-        "TimeZone": "Unknown",
-      };
     }
   }
 }
