@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'dart:math';
 import 'package:flutter/foundation.dart'; 
 import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
@@ -23,6 +24,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   final _formKey1 = GlobalKey<FormState>();
   // for the upload final step
   final _formKey2 = GlobalKey<FormState>();
+  final _formKey3 = GlobalKey<FormState>();
   final _fullNameController = TextEditingController();
   final _memberNumberController = TextEditingController();
   final _mobileController = TextEditingController();
@@ -43,6 +45,10 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   String? _selectedGender;
   bool _acceptedTerms = false;
   bool _isLoading = false;
+  bool _loadingQuestions = false;
+  List<dynamic> _allSecurityQuestions = [];
+  List<Map<String, dynamic>> _selectedSecurityQuestions = [];
+  final Map<int, TextEditingController> _securityAnswerControllers = {};
   
   final ImagePicker _picker = ImagePicker();
   final List<String> _idTypes = [
@@ -61,9 +67,11 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     _mobileController.dispose();
     _identificationNumberController.dispose();
     _emailController.dispose();
+    for (final c in _securityAnswerControllers.values) {
+      c.dispose();
+    }
     super.dispose();
   }
-  // Photo capture methods(enables selecting picture from gallery)-higher quality imgs
   Future<void> _captureSelfie() async {
     try {
       final XFile? image = await _picker.pickImage(
@@ -102,68 +110,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       );
     }
   }
-  Future<void> _takeCameraPhoto() async {
-    try {
-      final XFile? image = await _picker.pickImage(
-        source: ImageSource.camera,
-        imageQuality: 80,
-        maxWidth: 800,
-        maxHeight: 800,
-      ).onError((error, stackTrace) {
-        CustomDialogs.showErrorDialog(
-          context: context,
-          title: 'Camera Error',
-          message: 'Camera error: $error',
-        );
-        return null;
-      });
 
-      if (image != null) {
-        setState(() {
-          // store the file in mobile
-          _selfieImage = File(image.path);
-          _selfieImageBytes = null;
-        });
-        
-        StatusMessages.success(context, message: 'Photo captured successfully!');
-      }
-    } catch (e) {
-      CustomDialogs.showErrorDialog(
-        context: context,
-        title: 'Camera Error',
-        message: 'Camera error: $e',
-      );
-    }
-  }
-
-  Future<void> _pickImageFromGallery() async {
-    try {
-      final XFile? image = await _picker.pickImage(
-        source: ImageSource.gallery,
-        imageQuality: 80,
-        maxWidth: 800,
-        maxHeight: 800,
-      );
-
-      if (image != null) {
-        if (kIsWeb) {
-          _selfieImageBytes = await image.readAsBytes();
-          _selfieImage = null;
-        } else {
-          _selfieImage = File(image.path);
-          _selfieImageBytes = null;
-        }
-        setState(() {});
-        StatusMessages.success(context, message: 'Photo selected successfully!');
-      }
-    } catch (e) {
-      CustomDialogs.showErrorDialog(
-        context: context,
-        title: 'Image Selection Error',
-        message: 'Error selecting image: $e',
-      );
-    }
-  }
 Future<void> _pickSignature() async {
   try {
     final XFile? image = await _picker.pickImage(
@@ -251,6 +198,35 @@ Future<void> _pickSignature() async {
             );
         }
       }
+    } else if (_currentStep == 2) {
+      if (!_formKey2.currentState!.validate()) {
+        return;
+      }
+      if (!_hasSelfie()) {
+        CustomDialogs.showWarningDialog(
+          context: context,
+          title: 'Photo Required',
+          message: 'Please capture your photo',
+        );
+        return;
+      }
+      if (!_hasSignature()) {
+        CustomDialogs.showWarningDialog(
+          context: context,
+          title: 'Signature Required',
+          message: 'Please upload your signature',
+        );
+        return;
+      }
+      if (!_acceptedTerms) {
+        CustomDialogs.showWarningDialog(
+          context: context,
+          title: 'Terms Required',
+          message: 'Please accept the terms and conditions',
+        );
+        return;
+      }
+      await _goToSecurityQuestions();
     }
   }
 
@@ -262,37 +238,93 @@ Future<void> _pickSignature() async {
     }
   }
 
+  Future<void> _goToSecurityQuestions() async {
+    setState(() {
+      _loadingQuestions = true;
+    });
+    try {
+      final result = await ApiService.fetchSecurityQuestions();
+      if (result['success'] == true) {
+        final data = result['data'];
+        List<dynamic> collection;
+        if (data is List) {
+          collection = data;
+        } else if (data is Map && data['data'] is List) {
+          collection = List.from(data['data']);
+        } else {
+          collection = [];
+        }
+        _allSecurityQuestions = collection;
+        if (_allSecurityQuestions.isEmpty) {
+          CustomDialogs.showErrorDialog(
+            context: context,
+            title: 'No Questions',
+            message: 'No security questions available. Please try again later.',
+          );
+          setState(() {
+            _loadingQuestions = false;
+          });
+          return;
+        }
+        final random = Random();
+        final shuffled = List.from(_allSecurityQuestions)..shuffle(random);
+        final take = shuffled.take(5).toList();
+        _selectedSecurityQuestions = [];
+        for (var i = 0; i < take.length; i++) {
+          final q = take[i];
+          int intId;
+          String questionText;
+          if (q is Map) {
+            final rawId = q['Id'] ?? q['id'] ?? q['ID'] ?? q['QuestionId'] ?? q['questionId'] ?? q['Value'] ?? q['Code'];
+            final rawText = q['Question'] ?? q['question'] ?? q['Name'] ?? q['Text'] ?? q['Description'] ?? q['QuestionText'] ?? q['SecurityQuestion'] ?? q['Title'] ?? q['Value'];
+            intId = rawId is int ? rawId : int.tryParse(rawId?.toString() ?? '') ?? random.nextInt(1000000);
+            if (rawText == null) {
+              final firstString = q.values.firstWhere(
+                (v) => v is String && v.toString().trim().isNotEmpty,
+                orElse: () => 'Question',
+              );
+              questionText = firstString.toString();
+            } else {
+              questionText = rawText.toString();
+            }
+          } else if (q is String) {
+            intId = random.nextInt(1000000);
+            questionText = q;
+          } else {
+            intId = random.nextInt(1000000);
+            questionText = 'Question';
+          }
+          _securityAnswerControllers[intId]?.dispose();
+          _securityAnswerControllers[intId] = TextEditingController();
+          _selectedSecurityQuestions.add({'Id': intId, 'Question': questionText});
+        }
+        setState(() {
+          _currentStep = 3;
+          _loadingQuestions = false;
+        });
+      } else {
+        CustomDialogs.showErrorDialog(
+          context: context,
+          title: 'Error',
+          message: result['message'] ?? 'Failed to load security questions',
+        );
+        setState(() {
+          _loadingQuestions = false;
+        });
+      }
+    } catch (e) {
+      CustomDialogs.showErrorDialog(
+        context: context,
+        title: 'Error',
+        message: 'Failed to load security questions: $e',
+      );
+      setState(() {
+        _loadingQuestions = false;
+      });
+    }
+  }
+
   Future<void> _submitRegistration() async {
-    if (!_formKey2.currentState!.validate()) {
-      return;
-    }
-
-    if (!_hasSelfie()) {
-      CustomDialogs.showWarningDialog(
-        context: context,
-        title: 'Photo Required',
-        message: 'Please capture your photo',
-      );
-      return;
-    }
-    if (!_hasSignature()) {
-      CustomDialogs.showWarningDialog(
-        context: context,
-        title: 'Signature Required',
-        message: 'Please upload your signature',
-      );
-      return;
-    }
-
-    if (!_acceptedTerms) {
-      CustomDialogs.showWarningDialog(
-        context: context,
-        title: 'Terms Required',
-        message: 'Please accept the terms and conditions',
-      );
-      return;
-    }
-
     setState(() {
       _isLoading = true;
     });
@@ -311,6 +343,11 @@ Future<void> _pickSignature() async {
         signatureBytes: _signatureDocumentBytes,
         signatureFileName: _signatureDocumentName,
         gender: _selectedGender!,
+        securityAnswers: _selectedSecurityQuestions.map((q) {
+          final id = q['Id'] as int;
+          final ans = _securityAnswerControllers[id]?.text.trim() ?? '';
+          return { 'Id': id, 'Answer': ans };
+        }).toList(),
       );
 
       if (result['success']) {
@@ -873,13 +910,13 @@ Future<void> _pickSignature() async {
               Expanded(
                 flex: 2,
                 child: ElevatedButton(
-                  onPressed: _isLoading ? null : _submitRegistration,
+                  onPressed: _isLoading || _loadingQuestions ? null : _nextStep,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Theme.of(context).primaryColor,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 16),
                   ),
-                  child: _isLoading
+                  child: _isLoading || _loadingQuestions
                       ? const Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
@@ -892,11 +929,11 @@ Future<void> _pickSignature() async {
                               ),
                             ),
                             SizedBox(width: 12),
-                            Text('Creating Account...'),
+                            Text('Loading...'),
                           ],
                         )
                       : const Text(
-                          'Create Account',
+                          'Next',
                           style: TextStyle(fontSize: 16),
                         ),
                 ),
@@ -912,7 +949,7 @@ Future<void> _pickSignature() async {
     return Scaffold(
       appBar: AppBar(
         title: Text(_currentStep == 0 ? 'Personal Details' : 
-        _currentStep == 1 ? 'Confirm Details' : 'Photo & Signature'),
+        _currentStep == 1 ? 'Confirm Details' : _currentStep == 2 ? 'Photo & Signature' : 'Security Questions'),
         backgroundColor: Theme.of(context).primaryColor,
         foregroundColor: Colors.white,
       ),
@@ -956,12 +993,24 @@ Future<void> _pickSignature() async {
                         borderRadius: BorderRadius.circular(2)
                       ),
                     )
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Container(
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: _currentStep >= 3
+                        ? Theme.of(context).primaryColor
+                        : Colors.grey.shade300,
+                        borderRadius: BorderRadius.circular(2)
+                      ),
+                    )
                   )
                 ],
               ),
             ),
             Text(
-              'Step ${_currentStep + 1} of 3',
+              'Step ${_currentStep + 1} of 4',
               style: TextStyle(
                 color: Colors.grey.shade600,
                 fontSize: 14,
@@ -969,7 +1018,7 @@ Future<void> _pickSignature() async {
             ),
             const SizedBox(height: 24),
             _currentStep == 0 ? _buildStep1():
-            _currentStep == 1 ? _buildValidationStep() : _buildStep2(),
+            _currentStep == 1 ? _buildValidationStep() : _currentStep == 2 ? _buildStep2() : _buildSecurityQuestionsStep(),
             const SizedBox(height: 32),
             if (_currentStep == 0) ...[
               Row(
@@ -996,4 +1045,107 @@ Future<void> _pickSignature() async {
       ),
     );
   }
+
+  Widget _buildSecurityQuestionsStep() {
+    return Form(
+      key: _formKey3,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Security Questions',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 8),
+          const Text('Please answer all questions. These help secure your account.'),
+          const SizedBox(height: 16),
+          if (_loadingQuestions)
+            const Center(child: CircularProgressIndicator()),
+          if (!_loadingQuestions)
+            ..._selectedSecurityQuestions.map((q) {
+              final id = q['Id'] as int;
+              final controller = _securityAnswerControllers[id]!;
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      q['Question']?.toString() ?? 'Question',
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    const SizedBox(height: 8),
+                    TextFormField(
+                      controller: controller,
+                      validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
+                      decoration: const InputDecoration(
+                        labelText: 'Your Answer',
+                        border: OutlineInputBorder(),
+                        prefixIcon: Icon(Icons.question_answer),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: _previousStep,
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                  ),
+                  child: const Text('Previous'),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                flex: 2,
+                child: ElevatedButton(
+                  onPressed: _isLoading
+                      ? null
+                      : () {
+                          if (_formKey3.currentState!.validate()) {
+                            _submitRegistration();
+                          }
+                        },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Theme.of(context).primaryColor,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                  ),
+                  child: _isLoading
+                      ? const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                              ),
+                            ),
+                            SizedBox(width: 12),
+                            Text('Creating Account...'),
+                          ],
+                        )
+                      : const Text(
+                          'Create Account',
+                          style: TextStyle(fontSize: 16),
+                        ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+  
 }

@@ -100,6 +100,15 @@ class ApiConfig{
     return baseUrl + endpoint;
   }
 
+  // retrieves the security questions url
+  static String get securityQuestionsUrl{
+    final configured = dotenv.env['SECURITY_QUESTIONS'];
+      if(configured == null || configured.isEmpty){
+        throw Exception("SECURITY_QUESTIONS not found in the env file");
+      }
+      return baseUrl + configured;
+  }
+
   // this is the deposit/withdraw header only
   static Map<String, String> getTransactionHeaders(String token){
     return{

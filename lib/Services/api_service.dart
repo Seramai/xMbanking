@@ -102,6 +102,7 @@ class ApiService {
     File? signatureFile,
     Uint8List? signatureBytes,
     String? signatureFileName,
+    List<Map<String, dynamic>>? securityAnswers,
   }) async {
     try {
       
@@ -125,7 +126,7 @@ class ApiService {
         signatureBase64 = 'data:image/jpeg;base64,${base64Encode(bytes)}';
         
       }
-      final requestBody = {
+      final Map<String, dynamic> requestBody = {
         "ClientId": clientId,
         "Names": fullName,
         "Gender": gender,
@@ -136,8 +137,10 @@ class ApiService {
         "Selfie": selfieBase64,
         "Signature": signatureBase64,
       };
+      if (securityAnswers != null && securityAnswers.isNotEmpty) {
+        requestBody["SecurityAnswers"] = securityAnswers;
+      }
 
-      
       final response = await http.post(
         Uri.parse(ApiConfig.registrationUrl),
         headers: ApiConfig.headers,
@@ -148,7 +151,7 @@ class ApiService {
           throw Exception('Upload timeout - please check your internet connection');
         },
       );
-      
+
       
       if (response.statusCode == 200 || response.statusCode == 201) {
         final responseData = jsonDecode(response.body);
@@ -186,6 +189,59 @@ class ApiService {
       return {
         'success': false,
         'message': 'Registration failed: ${e.toString()}',
+      };
+    }
+  }
+
+  // Fetch security questions
+  static Future<Map<String, dynamic>> fetchSecurityQuestions() async {
+    try {
+      final response = await http
+          .get(
+            Uri.parse(ApiConfig.securityQuestionsUrl),
+            headers: ApiConfig.headers,
+          )
+          .timeout(
+            const Duration(seconds: 30),
+            onTimeout: () {
+              throw Exception('Request timeout - please check your internet connection');
+            },
+          );
+
+      if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body);
+        return {
+          'success': true,
+          'data': responseData,
+        };
+      } else if (response.statusCode == 400) {
+        final errorData = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': errorData['message'] ?? 'Failed to load security questions',
+          'errors': errorData,
+        };
+      } else {
+        return {
+          'success': false,
+          'message': 'Failed to load security questions: ${response.statusCode}',
+        };
+      }
+    } on SocketException {
+      return {
+        'success': false,
+        'message': 'No internet connection - please check your network',
+      };
+    } catch (e) {
+      if (e.toString().contains('timeout')) {
+        return {
+          'success': false,
+          'message': 'Request timeout - please check your internet connection',
+        };
+      }
+      return {
+        'success': false,
+        'message': 'Failed to load security questions: ${e.toString()}',
       };
     }
   }
