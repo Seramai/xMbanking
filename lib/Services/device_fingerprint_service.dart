@@ -194,7 +194,7 @@ class DeviceFingerprintService {
       print('[TRUST_DEVICE] Exception: $e');
       return {
         'success': false,
-        'message': 'Failed to trust device: ${e.toString()}',
+        'message': 'Failed to trust device. Please try again.',
       };
     }
   }

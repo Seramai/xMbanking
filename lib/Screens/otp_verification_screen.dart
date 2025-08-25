@@ -224,19 +224,7 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> with Code
         } else {
         }
         if (authToken != null && authToken.isNotEmpty) {
-          try {
-            final trustResult = await DeviceFingerprintService.trustDevice(
-              authToken: authToken,
-            );
-            
-            if (trustResult['success']) {
-              print('[OTP_VERIFICATION] Device trusted successfully');
-            } else {
-              print('[OTP_VERIFICATION] Failed to trust device: ${trustResult['message']}');
-            }
-          } catch (e) {
-            print('[OTP_VERIFICATION] Error trusting device: $e');
-          }
+          await _promptAndTrustDeviceMandatory(authToken);
         }
 
         CustomDialogs.showSuccessDialog(
@@ -296,6 +284,52 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> with Code
       if (mounted) {
         setState(() => _isLoading = false);
       }
+    }
+  }
+
+  Future<void> _trustCurrentDevice(String authToken) async {
+    try {
+      final trustResult = await DeviceFingerprintService.trustDevice(
+        authToken: authToken,
+      );
+      if (trustResult['success'] == true) {
+        print('[OTP_VERIFICATION] Device trusted successfully');
+      } else {
+        print('[OTP_VERIFICATION] Failed to trust device: ${trustResult['message']}');
+      }
+    } catch (e) {
+      print('[OTP_VERIFICATION] Error trusting device: $e');
+    }
+  }
+
+  Future<void> _promptAndTrustDeviceMandatory(String authToken) async {
+    try {
+      final completer = Completer<void>();
+
+      CustomDialogs.showConfirmationDialog(
+        context: context,
+        title: 'Trust this device',
+        message:
+            'To continue, you must trust this device for future sign-ins. Only trust devices you own.',
+        yesButtonText: 'Trust Device',
+        noButtonText: 'Cancel',
+        onYesPressed: () async {
+          Navigator.of(context).pop();
+          await _trustCurrentDevice(authToken);
+          if (!completer.isCompleted) completer.complete();
+        },
+        onNoPressed: () {
+          CustomDialogs.showWarningDialog(
+            context: context,
+            title: 'Action required',
+            message: 'You must trust this device to proceed.',
+          );
+        },
+      );
+
+      await completer.future;
+    } catch (e) {
+      print('[OTP_VERIFICATION] Unable to prompt mandatory trust: $e');
     }
   }
 

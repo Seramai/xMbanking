@@ -82,7 +82,7 @@ class ApiService {
       }
       return {
         'success': false,
-        'message': 'Validation failed: ${e.toString()}',
+        'message': 'Validation failed. Please try again.',
       };
     }
   }
@@ -185,7 +185,7 @@ class ApiService {
       }
       return {
         'success': false,
-        'message': 'Registration failed: ${e.toString()}',
+        'message': 'Registration failed. Please try again.',
       };
     }
   }
@@ -238,7 +238,7 @@ class ApiService {
       }
       return {
         'success': false,
-        'message': 'Failed to load security questions: ${e.toString()}',
+        'message': 'Failed to load security questions. Please try again.',
       };
     }
   }
@@ -303,16 +303,25 @@ class ApiService {
         'message': 'No internet connection - please check your network',
       };
     } catch (e) {
-      
       if (e.toString().contains('timeout')) {
         return {
           'success': false,
           'message': 'Login timeout - please check your internet connection',
         };
+      } else if (e is http.ClientException) {
+        return {
+          'success': false,
+          'message': 'Unable to connect. Please try again.',
+        };
+      } else if (e is FormatException) {
+        return {
+          'success': false,
+          'message': 'Unexpected response from server. Please try again.',
+        };
       }
       return {
         'success': false,
-        'message': 'Login failed: ${e.toString()}',
+        'message': 'Something went wrong. Please try again.',
       };
     }
   }
@@ -377,7 +386,7 @@ class ApiService {
       }
       return {
         'success': false,
-        'message': 'OTP verification failed: ${e.toString()}',
+        'message': 'OTP verification failed. Please try again.',
       };
     }
   }
@@ -480,7 +489,7 @@ class ApiService {
       }
       return {
         'success': false,
-        'message': 'Deposit failed: ${e.toString()}',
+        'message': 'Deposit failed. Please try again.',
       };
     }
   }
@@ -586,7 +595,7 @@ class ApiService {
       }
       return {
         'success': false,
-        'message': 'PIN change failed: ${e.toString()}',
+        'message': 'PIN change failed. Please try again.',
       };
     }
   }
@@ -796,7 +805,7 @@ class ApiService {
       }
       return {
         'success': false,
-        'message': 'Withdrawal failed: ${e.toString()}',
+        'message': 'Withdrawal failed. Please try again.',
       };
     }
   }
